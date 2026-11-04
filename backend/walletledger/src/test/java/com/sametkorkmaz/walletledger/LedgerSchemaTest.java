@@ -25,6 +25,16 @@ class LedgerSchemaTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    private UUID insertAccount(String currency) {
+        return jdbcTemplate.queryForObject("INSERT INTO accounts (currency) VALUES (?) RETURNING id", UUID.class,
+                currency);
+    }
+
+    private UUID insertEntry(String description) {
+        return jdbcTemplate.queryForObject("INSERT INTO journal_entries ( description) VALUES (?) RETURNING id", UUID.class,
+                description);
+    }
+
     @BeforeEach
     void cleanTables() {
         jdbcTemplate.batchUpdate("DELETE FROM journal_lines;",
@@ -32,11 +42,6 @@ class LedgerSchemaTest {
                 "DELETE FROM accounts;",
                 "DELETE FROM users;");
     }
-
-//    @Test
-//    void zeroAmountIsRejected() {
-//
-//    }
 
     @Nested
     @DisplayName("accounts")
@@ -81,6 +86,40 @@ class LedgerSchemaTest {
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("uq_accounts_external_currency");
         }
+    }
 
+    @Nested
+    @DisplayName("journal_lines")
+    class JournalLines {
+
+        private void insertLedgerLine(UUID accountId, UUID entryId, int amount) {
+            jdbcTemplate.update("INSERT INTO journal_lines (account_id, entry_id, amount) VALUES (?,?,?)",
+                    accountId, entryId, amount);
+        }
+
+        @Test
+        void amountZeroRejected() {
+            UUID accountId = insertAccount("EUR");
+            UUID entryId = insertEntry("TEST");
+            assertThatThrownBy(() -> insertLedgerLine(accountId, entryId, 0))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("ck_journal_lines_amount_not_zero");
+        }
+
+        @Test
+        void ledgerLineForNonExistentAccountIsRejected() {
+            UUID entryId = insertEntry("TEST");
+            assertThatThrownBy(() -> insertLedgerLine(UUID.randomUUID(), entryId, 10))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("fk_journal_lines_accounts");
+        }
+
+        @Test
+        void ledgerLineForNonExistentEntryIsRejected() {
+            UUID accountId = insertAccount("EUR");
+            assertThatThrownBy(() -> insertLedgerLine(accountId, UUID.randomUUID(), 10))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("fk_journal_lines_journal_entries");
+        }
     }
 }
