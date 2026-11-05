@@ -16,8 +16,19 @@ class LedgerLineTest {
     }
 
     @Nested
+    @DisplayName("Account")
+    class Account {
+        @Test
+        void rejectsNullAccountId() {
+            assertThatThrownBy(() -> new LedgerLine(null, Currency.EUR, BigDecimal.TEN))
+                    .isInstanceOf(NullPointerException.class)
+                    .hasMessageContaining("accountId must not be null");
+        }
+    }
+
+    @Nested
     @DisplayName("Currency")
-    class CurrencyTest {
+    class CurrencyField {
         @Test
         void rejectsNullCurrency() {
             assertThatThrownBy(() -> line(null, "10"))
@@ -41,7 +52,6 @@ class LedgerLineTest {
             assertThatThrownBy(() -> line(Currency.EUR, "0"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("amount must not be zero");
-
         }
     }
 }
