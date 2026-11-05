@@ -12,11 +12,15 @@ import java.util.UUID;
  *
  * @param accountId the account this line posts to
  * @param currency  the account's currency, used to check that entry balances per currency
- * @param amount    signed, non-zero amount (the zero check happens in {@code LedgerEntry}
+ * @param amount    signed, non-zero amount
  */
 public record LedgerLine(UUID accountId, Currency currency, BigDecimal amount) {
     public LedgerLine {
         Objects.requireNonNull(currency, "currency must not be null");
         Objects.requireNonNull(accountId, "accountId must not be null");
+        Objects.requireNonNull(amount, "amount must not be null");
+        if (amount.compareTo(BigDecimal.ZERO) == 0) {
+            throw new IllegalArgumentException("amount must not be zero");
+        }
     }
 }
