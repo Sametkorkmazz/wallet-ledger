@@ -123,6 +123,27 @@ class LedgerSchemaTest {
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("fk_journal_lines_journal_entries");
         }
+
+        @Test
+        void sameAccountTwiceInOneEntryRejected() {
+            UUID accountId = insertAccount("EUR");
+            UUID entryId = insertEntry("TEST");
+            insertLedgerLine(accountId, entryId, 10);
+            assertThatThrownBy(() -> insertLedgerLine(accountId, entryId, -10))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("uq_journal_lines_entry_account");
+        }
+
+        @Test
+        void sameAccountInDifferentEntriesAllowed() {
+            UUID accountId = insertAccount("EUR");
+            UUID entryId1 = insertEntry("TEST");
+            UUID entryId2 = insertEntry("TEST");
+            insertLedgerLine(accountId, entryId1, 10);
+            UUID savedAccount = assertDoesNotThrow(() -> jdbcTemplate.queryForObject("INSERT INTO journal_lines (account_id,entry_id , amount) VALUES (?,?,?) RETURNING account_id",
+                    UUID.class, accountId, entryId2, -20));
+            assertThat(savedAccount).isEqualTo(accountId);
+        }
     }
 
     @Nested
