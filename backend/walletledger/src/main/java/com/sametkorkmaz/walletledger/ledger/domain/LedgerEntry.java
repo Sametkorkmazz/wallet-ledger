@@ -33,16 +33,21 @@ public record LedgerEntry(String description, List<LedgerLine> lines) {
         }
         description = trimmedDesc;
 
+        Objects.requireNonNull(lines, "lines must not be null");
+        for (LedgerLine ledgerLine : lines) {
+            Objects.requireNonNull(ledgerLine, "line must not be null");
+        }
         lines = List.copyOf(lines);
         if (lines.size() < 2) {
             throw new IllegalArgumentException("Entry must have at least 2 lines");
         }
-
+        if (lines.stream().map(LedgerLine::accountId).distinct().count() != lines.size()) {
+            throw new IllegalArgumentException("Entry must not contain duplicate accounts");
+        }
         EnumMap<Currency, BigDecimal> totals = new EnumMap<>(Currency.class);
         for (LedgerLine line : lines) {
             totals.merge(line.currency(), line.amount(), BigDecimal::add);
         }
-
         for (Map.Entry<Currency, BigDecimal> currencyTotal : totals.entrySet()) {
             if (currencyTotal.getValue().compareTo(BigDecimal.ZERO) != 0) {
                 throw new IllegalArgumentException("Entry does not balance for " + currencyTotal.getKey() + ": total = " + currencyTotal.getValue());

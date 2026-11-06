@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -117,6 +118,16 @@ class LedgerEntryTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("description must not be blank");
         }
+
+        @Test
+        void rejectsDescriptionOverMaxLength() {
+            List<LedgerLine> lines = new ArrayList<>();
+            lines.add(line(Currency.EUR, "-5"));
+            lines.add(line(Currency.EUR, "5"));
+            assertThatThrownBy(() -> entry("1".repeat(MAX_DESCRIPTION_LENGTH) + "2", lines))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("description must be at most %d characters".formatted(MAX_DESCRIPTION_LENGTH));
+        }
     }
 
     @Nested
@@ -127,6 +138,18 @@ class LedgerEntryTest {
             assertThatThrownBy(() -> entry(null))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessageContaining("lines must not be null");
+        }
+
+        @Test
+        void rejectsNullLedgerLineInLines() {
+            List<LedgerLine> lines = Arrays.asList(
+                    line(Currency.EUR, "10"),
+                    line(Currency.EUR, "-10"),
+                    null
+            );
+            assertThatThrownBy(() -> entry(lines))
+                    .isInstanceOf(NullPointerException.class)
+                    .hasMessageContaining("line must not be null");
         }
 
         @Test
@@ -144,6 +167,19 @@ class LedgerEntryTest {
             assertThatThrownBy(() -> entry(lines))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Entry must have at least 2 lines");
+        }
+
+        @Test
+        void rejectsDuplicateAccountInLines() {
+            UUID id = UUID.randomUUID();
+            List<LedgerLine> lines = new ArrayList<>();
+            lines.add(new LedgerLine(id, Currency.EUR, new BigDecimal("-5")));
+            lines.add(new LedgerLine(id, Currency.EUR, new BigDecimal("-5")));
+            lines.add(line(Currency.EUR, "10"));
+
+            assertThatThrownBy(() -> entry(lines))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Entry must not contain duplicate accounts");
         }
     }
 
