@@ -21,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 class LedgerSchemaTest {
+    // mirrors VARCHAR(255) in V2__ledger.sql
+    private static final int MAX_DESCRIPTION_LENGTH = 255;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -120,6 +122,31 @@ class LedgerSchemaTest {
             assertThatThrownBy(() -> insertLedgerLine(accountId, UUID.randomUUID(), 10))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("fk_journal_lines_journal_entries");
+        }
+    }
+
+    @Nested
+    @DisplayName("Journal entries")
+    class JournalEntry {
+        @Test
+        void descriptionNullRejected() {
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description) VALUES (NULL)"))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("violates not-null constraint");
+        }
+
+        @Test
+        void descriptionOverMaxLengthRejected() {
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description) VALUES (?)", "A".repeat(MAX_DESCRIPTION_LENGTH + 1)))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("value too long for type character varying(255)");
+        }
+
+        @Test
+        void descriptionAtMaxLengthAccepted() {
+            String savedDescription = assertDoesNotThrow(() -> jdbcTemplate.queryForObject("INSERT INTO journal_entries (description) VALUES (?) RETURNING description",
+                    String.class, "A".repeat(MAX_DESCRIPTION_LENGTH)));
+            assertThat(savedDescription).isEqualTo("A".repeat(MAX_DESCRIPTION_LENGTH));
         }
     }
 }
