@@ -17,6 +17,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 class LedgerEntryTest {
+    // mirrors VARCHAR(255) in V2__ledger.sql
+    private static final int MAX_DESCRIPTION_LENGTH = 255;
 
     private LedgerLine line(Currency c, String amount) {
         return new LedgerLine(UUID.randomUUID(), c, new BigDecimal(amount));
@@ -47,6 +49,30 @@ class LedgerEntryTest {
             LedgerLine line2 = line(Currency.EUR, "-2");
             LedgerLine line3 = line(Currency.EUR, "-3");
             assertDoesNotThrow(() -> entry(List.of(line1, line2, line3)));
+        }
+
+        @Test
+        void acceptsDescriptionAtMaxLength() {
+            LedgerLine line1 = line(Currency.EUR, "5");
+            LedgerLine line2 = line(Currency.EUR, "-5");
+            LedgerEntry ledgerEntry = assertDoesNotThrow(() -> entry("A".repeat(MAX_DESCRIPTION_LENGTH), List.of(line1, line2)));
+            assertThat(ledgerEntry.description()).hasSize(MAX_DESCRIPTION_LENGTH);
+        }
+
+        @Test
+        void acceptsTrimmedDescriptionAtMaxLength() {
+            LedgerLine line1 = line(Currency.EUR, "5");
+            LedgerLine line2 = line(Currency.EUR, "-5");
+            LedgerEntry ledgerEntry = assertDoesNotThrow(() -> entry(" " + "A".repeat(MAX_DESCRIPTION_LENGTH) + " ", List.of(line1, line2)));
+            assertThat(ledgerEntry.description()).isEqualTo("A".repeat(MAX_DESCRIPTION_LENGTH));
+        }
+
+        @Test
+        void returnsTrimmedDescription() {
+            LedgerLine line1 = line(Currency.EUR, "5");
+            LedgerLine line2 = line(Currency.EUR, "-5");
+            LedgerEntry ledgerEntry = entry("  top-up  ", List.of(line1, line2));
+            assertThat(ledgerEntry.description()).isEqualTo("top-up");
         }
 
         @Test

@@ -10,21 +10,28 @@ import java.util.Objects;
  * A balanced set of ledger lines that will be posted together.
  * <p>
  * Rules (checked on construction, so an invalid entry cannot exist):
- * at least two lines, and the amounts sum to zero per currency.
+ * at least two lines, no duplicate account lines, and the amounts sum to zero per currency.
  * A positive amount increases an account's balance, a negative amount decreases it.
  * The currency comes from the account and is passed in by the posting service.
  *
- * @param description human-readable reason for the entry, e.g. "top-up" (not blank).
+ * @param description human-readable reason for the entry, e.g. "top-up".
+ *                    Leading and trailing whitespace is trimmed; must not be blank and at most 255 characters.
  * @param lines       at least two lines; amounts must sum to zero per currency
  */
 public record LedgerEntry(String description, List<LedgerLine> lines) {
+
+    private static final int MAX_DESCRIPTION_LENGTH = 255;
 
     public LedgerEntry {
         Objects.requireNonNull(description, "description must not be null");
         if (description.isBlank()) {
             throw new IllegalArgumentException("description must not be blank");
         }
-        Objects.requireNonNull(lines, "lines must not be null");
+        String trimmedDesc = description.trim();
+        if (trimmedDesc.length() > MAX_DESCRIPTION_LENGTH) {
+            throw new IllegalArgumentException("description must be at most %d characters".formatted(MAX_DESCRIPTION_LENGTH));
+        }
+        description = trimmedDesc;
 
         lines = List.copyOf(lines);
         if (lines.size() < 2) {
