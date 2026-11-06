@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -134,10 +135,19 @@ class LedgerLineTest {
         }
 
         @Test
-        void rejectsNegativeScaleThatDoesNotFit() {
-            assertThatThrownBy(() -> line(Currency.EUR, "1E+20")) // 100,000,000,000,000,000,000 (21 digits)
+        void rejectsExtremeNegativeScale() {
+            BigDecimal amount = new BigDecimal(BigInteger.ONE, Integer.MIN_VALUE);
+            assertThatThrownBy(() -> new LedgerLine(UUID.randomUUID(), Currency.EUR, amount))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("at most %d".formatted(MAX_DIGITS));
+        }
+
+        @Test
+        void rejectsExtremePositiveScale() {
+            BigDecimal amount = new BigDecimal(BigInteger.ONE, Integer.MAX_VALUE);
+            assertThatThrownBy(() -> new LedgerLine(UUID.randomUUID(), Currency.EUR, amount))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("at most %d".formatted(MAX_SCALE));
         }
 
         @Test

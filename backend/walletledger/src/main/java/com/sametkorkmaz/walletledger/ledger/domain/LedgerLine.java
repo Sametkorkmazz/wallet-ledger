@@ -15,7 +15,8 @@ import java.util.UUID;
  *
  * @param accountId the account this line posts to
  * @param currency  the account's currency, used to check that entry balances per currency
- * @param amount    signed, non-zero amount
+ * @param amount    signed, non-zero amount; at most 4 decimals and 15 integer digits, stored at scale 4 (throws
+ *                  IllegalArgumentException otherwise)
  */
 public record LedgerLine(UUID accountId, Currency currency, BigDecimal amount) {
     private static final int MAX_SCALE = 4;
@@ -28,14 +29,14 @@ public record LedgerLine(UUID accountId, Currency currency, BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) == 0) {
             throw new IllegalArgumentException("amount must not be zero");
         }
-        int scale = amount.stripTrailingZeros().scale();
-        if (scale > MAX_SCALE) {
-            throw new IllegalArgumentException("amount must have at most %d decimal places (currently %d)".formatted(MAX_SCALE, scale));
-        }
-        int digits = amount.precision() - amount.scale();
+        long digits = (long) amount.precision() - amount.scale();
         if (digits > MAX_DIGITS) {
             throw new IllegalArgumentException("amount must have at most %d integer digits (currently %d)".formatted(MAX_DIGITS, digits));
         }
-        amount = amount.setScale(MAX_SCALE, RoundingMode.UNNECESSARY);
+        try {
+            amount = amount.setScale(MAX_SCALE, RoundingMode.UNNECESSARY);
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException("amount must have at most %d decimal places".formatted(MAX_SCALE), e);
+        }
     }
 }
