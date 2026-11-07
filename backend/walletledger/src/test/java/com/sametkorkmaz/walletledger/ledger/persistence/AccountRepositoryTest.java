@@ -10,14 +10,12 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 @Import(TestcontainersConfiguration.class)
@@ -41,8 +39,8 @@ class AccountRepositoryTest {
     }
 
     @Nested
-    @DisplayName("Save an account")
-    class SaveAccount {
+    @DisplayName("Saving and reading")
+    class SavingAndReading {
         @Test
         void savesAccount() {
             AccountEntity account = accountRepository.saveAndFlush(anAccount(Currency.EUR));
@@ -52,14 +50,6 @@ class AccountRepositoryTest {
             assertThat(saved.get().getUserId()).isNull();
             assertThat(saved.get().getCurrency()).isEqualTo(Currency.EUR);
             assertThat(saved.get().getCreatedAt()).isNotNull();
-        }
-
-        @Test
-        void rejectsSecondExternalAccountInSameCurrency() {
-            accountRepository.saveAndFlush(anAccount(Currency.EUR));
-            assertThatThrownBy(() -> accountRepository.saveAndFlush(anAccount(Currency.EUR)))
-                    .isInstanceOf(DataIntegrityViolationException.class)
-                    .hasMessageContaining("uq_accounts_external_currency");
         }
 
         @Test

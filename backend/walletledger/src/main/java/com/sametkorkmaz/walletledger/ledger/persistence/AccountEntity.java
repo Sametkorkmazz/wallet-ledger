@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -16,20 +17,21 @@ public class AccountEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "USER_ID", nullable = true)
+    @Column(name = "user_id", nullable = true)
     private UUID userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "CURRENCY", nullable = false)
+    @Column(name = "currency", nullable = false)
     private Currency currency;
 
-    @Column(name = "CREATED_AT", insertable = false, updatable = false, nullable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
     protected AccountEntity() {
     }
 
     public AccountEntity(UUID userId, Currency currency) {
+        Objects.requireNonNull(currency, "currency must not be null");
         this.userId = userId;
         this.currency = currency;
         this.createdAt = Instant.now();
