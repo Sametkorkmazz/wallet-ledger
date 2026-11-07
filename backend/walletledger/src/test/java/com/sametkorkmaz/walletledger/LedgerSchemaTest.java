@@ -23,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 class LedgerSchemaTest {
     // mirrors VARCHAR(255) in V2__ledger.sql
     private static final int MAX_DESCRIPTION_LENGTH = 255;
+    // mirrors NUMERIC(19, 4) in V2__ledger.sql
+    private static final int MAX_SCALE = 4;
+    private static final int MAX_INTEGER_DIGITS = 15;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -33,7 +36,7 @@ class LedgerSchemaTest {
     }
 
     private UUID insertEntry(String description) {
-        return jdbcTemplate.queryForObject("INSERT INTO journal_entries ( description) VALUES (?) RETURNING id", UUID.class,
+        return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description) VALUES (?) RETURNING id", UUID.class,
                 description);
     }
 
@@ -53,7 +56,7 @@ class LedgerSchemaTest {
         void accountForNonExistentUserIsRejected() {
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO accounts (user_id, currency) VALUES (?,'EUR')", UUID.randomUUID()))
                     .isInstanceOf(DataIntegrityViolationException.class)
-                    .hasMessageContaining("fk_accounts_user");
+                    .hasMessageContaining("fk_accounts_users");
         }
 
         @ParameterizedTest
@@ -106,6 +109,24 @@ class LedgerSchemaTest {
             assertThatThrownBy(() -> insertLedgerLine(accountId, entryId, 0))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("ck_journal_lines_amount_not_zero");
+        }
+
+        @Test
+        void amountColumnMatchesDomainLimits() {
+            int columnScale = jdbcTemplate.queryForObject("""
+                    SELECT numeric_scale FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                    AND table_name = 'journal_lines'
+                    AND column_name = 'amount'
+                    """, Integer.class);
+            int columnIntegerDigits = jdbcTemplate.queryForObject("""
+                    SELECT numeric_precision - numeric_scale FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                    AND table_name = 'journal_lines'
+                    AND column_name = 'amount'
+                    """, Integer.class);
+            assertThat(columnScale).isEqualTo(MAX_SCALE);
+            assertThat(columnIntegerDigits).isEqualTo(MAX_INTEGER_DIGITS);
         }
 
         @Test
