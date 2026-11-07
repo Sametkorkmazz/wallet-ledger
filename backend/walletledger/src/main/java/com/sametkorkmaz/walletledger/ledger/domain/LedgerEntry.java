@@ -20,7 +20,7 @@ import java.util.Objects;
  */
 public record LedgerEntry(String description, List<LedgerLine> lines) {
 
-    private static final int MAX_DESCRIPTION_LENGTH = 255;
+    public static final int MAX_DESCRIPTION_LENGTH = 255;
 
     public LedgerEntry {
         Objects.requireNonNull(description, "description must not be null");
