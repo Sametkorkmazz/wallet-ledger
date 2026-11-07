@@ -19,8 +19,8 @@ import java.util.UUID;
  *                  IllegalArgumentException otherwise)
  */
 public record LedgerLine(UUID accountId, Currency currency, BigDecimal amount) {
-    private static final int MAX_SCALE = 4;
-    private static final int MAX_DIGITS = 15;
+    public static final int MAX_SCALE = 4;
+    public static final int MAX_DIGITS = 15;
 
     public LedgerLine {
         Objects.requireNonNull(accountId, "accountId must not be null");
