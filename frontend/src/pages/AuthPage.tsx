@@ -1,4 +1,5 @@
 import SignInForm from "@/components/auth/SignInForm";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -16,7 +17,10 @@ export default function AuthPage() {
   const navigate = useNavigate();
 
   return (
-    <main className="min-h-screen bg-background flex flex-wrap items-center justify-center gap-12 p-8">
+    <main className="min-h-screen bg-background relative flex flex-wrap items-center justify-center gap-12 p-8">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="max-w-md flex flex-col gap-5">
         <div className="flex items-center gap-2">
           <span className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
