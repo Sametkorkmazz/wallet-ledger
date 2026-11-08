@@ -1,4 +1,5 @@
 import SignInForm from "@/components/auth/SignInForm";
+import SignUpForm from "@/components/auth/SignUpForm";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,9 +45,19 @@ export default function AuthPage() {
       <Card className="w-full max-w-md shadow-none">
         <CardContent className="flex flex-col gap-5">
           <Tabs defaultValue="signin" className="flex-col">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign in</TabsTrigger>
-              <TabsTrigger value="signup">Create account</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 group-data-horizontal/tabs:h-12">
+              <TabsTrigger
+                value="signin"
+                className="text-base data-active:border-border"
+              >
+                Sign in
+              </TabsTrigger>
+              <TabsTrigger
+                value="signup"
+                className="text-base data-active:border-border"
+              >
+                Create account
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="signin" className="flex flex-col gap-4 pt-4">
               <div>
@@ -59,8 +70,16 @@ export default function AuthPage() {
               </div>
               <SignInForm />
             </TabsContent>
-            <TabsContent value="signup" className="pt-4">
-              <p className="text-sm text-muted-foreground">To do</p>
+            <TabsContent value="signup" className="flex flex-col gap-4 pt-4">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  Create your account
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Start with fake money in EUR, USD and TRY.
+                </p>
+              </div>
+              <SignUpForm />
             </TabsContent>
           </Tabs>
 
