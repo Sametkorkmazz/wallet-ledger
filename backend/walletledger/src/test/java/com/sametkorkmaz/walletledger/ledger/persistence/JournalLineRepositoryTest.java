@@ -30,18 +30,6 @@ class JournalLineRepositoryTest {
     @Autowired
     JdbcTemplate jdbcTemplate;
 
-    private UUID insertUser() {
-        return jdbcTemplate.queryForObject("INSERT INTO users (email,password_hash) VALUES  (?,'test123') RETURNING id", UUID.class, UUID.randomUUID() + "@test.com");
-    }
-
-    private UUID insertAccount() {
-        UUID userId = insertUser();
-        return jdbcTemplate.queryForObject("INSERT INTO accounts (user_id, currency) VALUES  (?,'EUR') RETURNING id", UUID.class, userId);
-    }
-
-    private UUID insertEntry() {
-        return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description) VALUES  ('test') RETURNING id", UUID.class);
-    }
 
     private JournalLineEntity saveLine(UUID accountId, UUID entryId, String amount) {
         return journalLineRepository.saveAndFlush(new JournalLineEntity(accountId, entryId, new BigDecimal(amount)));
@@ -52,8 +40,8 @@ class JournalLineRepositoryTest {
     class SavingAndReading {
         @Test
         void savesJournalLine() {
-            UUID accountId = insertAccount();
-            UUID entryId = insertEntry();
+            UUID accountId = TestData.insertAccount(jdbcTemplate);
+            UUID entryId = TestData.insertEntry(jdbcTemplate);
             UUID savedId = saveLine(accountId, entryId, "-12.3456").getId();
             testEntityManager.clear();
             JournalLineEntity found = journalLineRepository.findById(savedId).orElseThrow();
@@ -69,10 +57,10 @@ class JournalLineRepositoryTest {
     class FindByEntryId {
         @Test
         void returnsOnlyLinesOfThatEntry() {
-            UUID account1 = insertAccount();
-            UUID account2 = insertAccount();
-            UUID entryId1 = insertEntry();
-            UUID entryId2 = insertEntry();
+            UUID account1 = TestData.insertAccount(jdbcTemplate);
+            UUID account2 = TestData.insertAccount(jdbcTemplate);
+            UUID entryId1 = TestData.insertEntry(jdbcTemplate);
+            UUID entryId2 = TestData.insertEntry(jdbcTemplate);
             saveLine(account1, entryId1, "-12.3456");
             saveLine(account2, entryId1, "5.302");
             saveLine(account2, entryId2, "100.20");
@@ -84,8 +72,8 @@ class JournalLineRepositoryTest {
 
         @Test
         void returnsEmptyListForUnknownEntry() {
-            UUID account1 = insertAccount();
-            UUID entryId1 = insertEntry();
+            UUID account1 = TestData.insertAccount(jdbcTemplate);
+            UUID entryId1 = TestData.insertEntry(jdbcTemplate);
             saveLine(account1, entryId1, "-12.3456");
             testEntityManager.clear();
             List<JournalLineEntity> found = journalLineRepository.findByEntryId(UUID.randomUUID());
@@ -98,11 +86,11 @@ class JournalLineRepositoryTest {
     class SumAmountByAccountId {
         @Test
         void returnsZeroWhenNoLineFoundUnderAccount() {
-            UUID account1 = insertAccount();
-            UUID account2 = insertAccount();
+            UUID account1 = TestData.insertAccount(jdbcTemplate);
+            UUID account2 = TestData.insertAccount(jdbcTemplate);
 
-            UUID entryId1 = insertEntry();
-            UUID entryId2 = insertEntry();
+            UUID entryId1 = TestData.insertEntry(jdbcTemplate);
+            UUID entryId2 = TestData.insertEntry(jdbcTemplate);
 
             saveLine(account1, entryId1, "10.00");
             saveLine(account2, entryId1, "-10.00");
@@ -110,7 +98,7 @@ class JournalLineRepositoryTest {
             saveLine(account1, entryId2, "30.00");
             saveLine(account2, entryId2, "-30.00");
 
-            UUID account3 = insertAccount();
+            UUID account3 = TestData.insertAccount(jdbcTemplate);
             testEntityManager.clear();
             BigDecimal sum = journalLineRepository.sumAmountByAccountId(account3);
             assertThat(sum).isEqualByComparingTo(BigDecimal.ZERO);
@@ -118,11 +106,11 @@ class JournalLineRepositoryTest {
 
         @Test
         void sumsPositiveAndNegativeAmounts() {
-            UUID account1 = insertAccount();
-            UUID account2 = insertAccount();
+            UUID account1 = TestData.insertAccount(jdbcTemplate);
+            UUID account2 = TestData.insertAccount(jdbcTemplate);
 
-            UUID entryId1 = insertEntry();
-            UUID entryId2 = insertEntry();
+            UUID entryId1 = TestData.insertEntry(jdbcTemplate);
+            UUID entryId2 = TestData.insertEntry(jdbcTemplate);
 
             saveLine(account1, entryId1, "105.00");
             saveLine(account2, entryId1, "-105.00");
@@ -137,13 +125,13 @@ class JournalLineRepositoryTest {
 
         @Test
         void sumsAmountOnlyOfThatAccount() {
-            UUID account1 = insertAccount();
-            UUID account2 = insertAccount();
-            UUID account3 = insertAccount();
-            UUID account4 = insertAccount();
+            UUID account1 = TestData.insertAccount(jdbcTemplate);
+            UUID account2 = TestData.insertAccount(jdbcTemplate);
+            UUID account3 = TestData.insertAccount(jdbcTemplate);
+            UUID account4 = TestData.insertAccount(jdbcTemplate);
 
-            UUID entryId1 = insertEntry();
-            UUID entryId2 = insertEntry();
+            UUID entryId1 = TestData.insertEntry(jdbcTemplate);
+            UUID entryId2 = TestData.insertEntry(jdbcTemplate);
 
             saveLine(account1, entryId1, "15.00");
             saveLine(account2, entryId1, "-15.00");

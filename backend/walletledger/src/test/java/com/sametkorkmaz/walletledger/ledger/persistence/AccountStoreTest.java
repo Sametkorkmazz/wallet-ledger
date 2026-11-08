@@ -35,11 +35,6 @@ class AccountStoreTest {
     @Autowired
     JdbcTemplate jdbcTemplate;
 
-    private UUID insertUser() {
-        return jdbcTemplate.queryForObject("INSERT INTO users (email, password_hash) values (?,'test123') RETURNING ID",
-                UUID.class, UUID.randomUUID() + "@test.com");
-    }
-
     private AccountEntity saveAccount(UUID userId, Currency currency) {
         return accountRepository.saveAndFlush(new AccountEntity(userId, currency));
     }
@@ -49,7 +44,7 @@ class AccountStoreTest {
     class FindByIds {
         @Test
         void returnsEmptyMapForNoIds() {
-            UUID userId = insertUser();
+            UUID userId = TestData.insertUser(jdbcTemplate);
             saveAccount(userId, Currency.EUR);
             saveAccount(userId, Currency.USD);
             testEntityManager.clear();
@@ -59,7 +54,7 @@ class AccountStoreTest {
 
         @Test
         void returnsAccountsForKnownIds() {
-            UUID userId = insertUser();
+            UUID userId = TestData.insertUser(jdbcTemplate);
             AccountEntity accountEntity1 = saveAccount(userId, Currency.EUR);
             AccountEntity accountEntity2 = saveAccount(userId, Currency.USD);
             testEntityManager.clear();
@@ -78,7 +73,7 @@ class AccountStoreTest {
 
         @Test
         void returnsOnlyRequestedAccounts() {
-            UUID userId = insertUser();
+            UUID userId = TestData.insertUser(jdbcTemplate);
             AccountEntity accountEntity1 = saveAccount(userId, Currency.EUR);
             saveAccount(userId, Currency.USD);
             testEntityManager.clear();
@@ -88,7 +83,7 @@ class AccountStoreTest {
 
         @Test
         void omitsUnknownIdsFromResult() {
-            UUID userId = insertUser();
+            UUID userId = TestData.insertUser(jdbcTemplate);
             AccountEntity accountEntity = saveAccount(userId, Currency.EUR);
             saveAccount(userId, Currency.USD);
             testEntityManager.clear();
@@ -98,7 +93,7 @@ class AccountStoreTest {
 
         @Test
         void returnsEmptyMapForUnknownIds() {
-            UUID userId = insertUser();
+            UUID userId = TestData.insertUser(jdbcTemplate);
             saveAccount(userId, Currency.EUR);
             saveAccount(userId, Currency.USD);
             testEntityManager.clear();
