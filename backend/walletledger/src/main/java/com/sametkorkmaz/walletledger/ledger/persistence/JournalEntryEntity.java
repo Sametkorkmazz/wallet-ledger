@@ -11,7 +11,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "journal_entries")
 @Getter
-public class JournalEntryEntity {
+class JournalEntryEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;

@@ -11,7 +11,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "accounts")
 @Getter
-public class AccountEntity {
+class AccountEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

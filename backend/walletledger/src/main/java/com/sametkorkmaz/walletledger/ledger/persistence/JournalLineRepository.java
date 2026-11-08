@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-public interface JournalLineRepository extends JpaRepository<JournalLineEntity, UUID> {
+interface JournalLineRepository extends JpaRepository<JournalLineEntity, UUID> {
     List<JournalLineEntity> findByEntryId(UUID entryId);
 
     @Query("SELECT COALESCE(SUM(l.amount), 0) FROM JournalLineEntity l WHERE l.accountId = :accountId")
