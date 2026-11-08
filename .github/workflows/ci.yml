@@ -27,3 +27,8 @@ jobs:
           java-version: '21'
           cache: maven
       - run: ./mvnw test
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: surefire-reports
+          path: backend/walletledger/target/surefire-reports
