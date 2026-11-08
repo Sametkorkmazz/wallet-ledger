@@ -1,7 +1,13 @@
-export function setTheme(dark: boolean) {
-  document.documentElement.classList.toggle("dark", dark);
+export type Theme = "light" | "dark";
+export const THEME_KEY = "theme";
+
+export function applyTheme(theme: Theme) {
+  document.documentElement.classList.toggle("dark", theme === "dark");
+}
+
+export function saveTheme(theme: Theme) {
   try {
-    localStorage.setItem("theme", dark ? "dark" : "light");
+    localStorage.setItem(THEME_KEY, theme);
   } catch {
     // storage unavailable (private mode); fall back to system preference
   }
