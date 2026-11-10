@@ -3,16 +3,14 @@
 A multi-currency wallet (EUR, USD, TRY) backed by a double-entry ledger. All money is fake. This is a portfolio project
 that tackles the problems real payment systems face.
 
-> **Status:** early development. The database schema, ledger domain model, persistence stores, CI and the frontend
-> scaffold (theme, sign-in and sign-up screens) are in place. The posting service, API and the rest of the screens are
-> next.
+> **Status:** early development. The database schema, ledger domain model, persistence stores, posting service, CI and
+> the frontend scaffold (theme, sign-in and sign-up screens) are in place. The API and the rest of the screens are next.
 
 ## Goals
 
 - **No duplicate payments:** every transfer carries an idempotency key. *(planned)*
 - **Correct under concurrency:** accounts are locked in a fixed order and tested with parallel transfers. *(planned)*
-- **Auditable books:** entries are append-only, and every entry balances to zero. *(domain rules and schema done,
-  posting service next)*
+- **Auditable books:** entries are append-only, and every entry balances to zero. *(done)*
 - **Reliable events:** a transactional outbox publishes to Kafka. *(planned)*
 - **Protected endpoints:** Redis rate limiting with a documented fail-open/closed decision. *(planned)*
 
@@ -22,7 +20,7 @@ that tackles the problems real payment systems face.
 |----------|-------------------------------------------------------------------------------------------|
 | Backend  | Java 21, Spring Boot 3.5, Maven                                                           |
 | Database | PostgreSQL 16, Flyway migrations                                                          |
-| Tests    | JUnit 5, AssertJ, Testcontainers                                                          |
+| Tests    | JUnit 5, AssertJ, Mockito, Testcontainers, ArchUnit                                       |
 | Frontend | React, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, React Hook Form, Zod                 |
 | CI       | GitHub Actions: backend tests, frontend lint and build; Dependabot for dependency updates |
 | Planned  | TanStack Query, Kafka, Redis, Docker (full stack), AWS (Terraform)                        |
@@ -133,17 +131,20 @@ Database tests use Testcontainers, so they need Docker but no local database set
 - schema constraints (duplicate accounts, unknown currencies, zero amounts, missing foreign keys)
 - domain rules in `LedgerEntry` and `LedgerLine` (plain unit tests, no database)
 - entities, repositories and stores, including a rollback test for failed saves
+- posting service rules: unbalanced entries, unknown accounts and rollback (unit and integration tests)
+- an ArchUnit rule that keeps entities inside `ledger.persistence`
 
 CI also lints and builds the frontend on every pull request.
 
 ## Roadmap
 
-1. ~~Ledger core: domain model, stores~~ (posting service next)
-2. Idempotent transfers, locking, rounding rules
-3. Spring Security + JWT, OpenAPI spec
-4. React + TypeScript frontend (scaffold, theme and auth screens done)
-5. Docker Compose for the full stack, Redis rate limiter, Kafka outbox
-6. AWS deployment with Terraform, demo account
+1. ~~Ledger core: domain model, stores~~
+2. ~~Posting service~~
+3. Idempotent transfers, locking, rounding rules
+4. Spring Security + JWT, OpenAPI spec
+5. React + TypeScript frontend (scaffold, theme and auth screens done)
+6. Docker Compose for the full stack, Redis rate limiter, Kafka outbox
+7. AWS deployment with Terraform, demo account
 
 ## License
 
