@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -22,10 +24,11 @@ public class LedgerStore {
     public UUID saveEntry(LedgerEntry ledgerEntry) {
         JournalEntryEntity journalEntryEntity = new JournalEntryEntity(ledgerEntry.description());
         journalEntryEntity = journalEntryRepository.saveAndFlush(journalEntryEntity);
+        List<JournalLineEntity> lines = new ArrayList<>();
         for (LedgerLine line : ledgerEntry.lines()) {
-            JournalLineEntity journalLineEntity = new JournalLineEntity(line.accountId(), journalEntryEntity.getId(), line.amount());
-            journalLineRepository.saveAndFlush(journalLineEntity);
+            lines.add(new JournalLineEntity(line.accountId(), journalEntryEntity.getId(), line.amount()));
         }
+        journalLineRepository.saveAllAndFlush(lines);
         return journalEntryEntity.getId();
     }
 
