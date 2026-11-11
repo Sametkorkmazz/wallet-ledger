@@ -49,6 +49,25 @@ class LedgerSchemaTest {
     }
 
     @Nested
+    @DisplayName("users")
+    class Users {
+        @Test
+        void userWithDuplicateEmailIsRejected() {
+            jdbcTemplate.update("INSERT INTO users (email, password_hash) VALUES (?, ?)", "test@example.com", "test123");
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO users (email, password_hash) VALUES (?, ?)", "test@example.com", "test456"))
+                    .isInstanceOf(DataIntegrityViolationException.class);
+        }
+
+        @Test
+        void userWithSameEmailInDifferentCaseIsRejected() {
+            jdbcTemplate.update("INSERT INTO users (email, password_hash) VALUES (?, ?)", "test@example.com", "test123");
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO users (email, password_hash) VALUES (?, ?)", "TEST@example.com", "test456"))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("uq_users_email_lower");
+        }
+    }
+
+    @Nested
     @DisplayName("accounts")
     class Accounts {
 
