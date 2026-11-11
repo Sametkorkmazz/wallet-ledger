@@ -29,7 +29,7 @@ class JournalLineEntity {
     protected JournalLineEntity() {
     }
 
-    public JournalLineEntity(UUID accountId, UUID entryId, BigDecimal amount) {
+    JournalLineEntity(UUID accountId, UUID entryId, BigDecimal amount) {
         Objects.requireNonNull(accountId, "accountId must not be null");
         Objects.requireNonNull(entryId, "entryId must not be null");
         Objects.requireNonNull(amount, "amount must not be null");

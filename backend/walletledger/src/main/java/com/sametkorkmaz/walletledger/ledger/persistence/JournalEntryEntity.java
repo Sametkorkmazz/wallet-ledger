@@ -25,7 +25,7 @@ class JournalEntryEntity {
     protected JournalEntryEntity() {
     }
 
-    public JournalEntryEntity(String description) {
+    JournalEntryEntity(String description) {
         Objects.requireNonNull(description, "description must not be null");
         this.description = description;
         this.createdAt = Instant.now();
