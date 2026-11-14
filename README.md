@@ -3,8 +3,9 @@
 A multi-currency wallet (EUR, USD, TRY) backed by a double-entry ledger. All money is fake. This is a portfolio project
 that tackles the problems real payment systems face.
 
-> **Status:** early development. The database schema, ledger domain model, persistence stores, posting service, CI and
-> the frontend scaffold (theme, sign-in and sign-up screens) are in place. The API and the rest of the screens are next.
+> **Status:** early development. The database schema, ledger domain model (including a Money value type), persistence
+> stores, posting service and CI are in place. On the frontend: theme, sign-in and sign-up screens, routing, and a
+> dashboard with balance cards on mock data. The API and the rest of the screens are next.
 
 ## Goals
 
@@ -123,6 +124,7 @@ erDiagram
 Decisions are recorded as architecture decision records in [`docs/adr`](docs/adr):
 
 - [0001: Double-entry ledger](docs/adr/0001-double-entry-ledger.md)
+- [0004: Money type and rounding](docs/adr/0004-money-type-and-rounding.md) (proposed)
 
 ## Testing
 
