@@ -4,6 +4,7 @@ import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
+import com.sametkorkmaz.walletledger.ledger.domain.Money;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -14,7 +15,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,8 +46,8 @@ class LedgerStoreIntegrationTest {
         void savesEntryAndAllLinesTogether() {
             UUID account1 = TestData.insertAccount(jdbcTemplate);
             UUID account2 = TestData.insertAccount(jdbcTemplate);
-            LedgerLine ledgerLine1 = new LedgerLine(account1, Currency.EUR, new BigDecimal("10.0"));
-            LedgerLine ledgerLine2 = new LedgerLine(account2, Currency.EUR, new BigDecimal("-10.0"));
+            LedgerLine ledgerLine1 = new LedgerLine(account1, Money.of(Currency.EUR, "10.0"));
+            LedgerLine ledgerLine2 = new LedgerLine(account2, Money.of(Currency.EUR, "-10.0"));
             LedgerEntry ledgerEntry = new LedgerEntry("TEST", List.of(ledgerLine1, ledgerLine2));
             ledgerStore.saveEntry(ledgerEntry);
             int entries = jdbcTemplate.queryForObject("SELECT count(*) FROM journal_entries", Integer.class);
@@ -59,8 +59,8 @@ class LedgerStoreIntegrationTest {
         @Test
         void rollsBackEntryAndLinesWhenALineFails() {
             UUID account1 = TestData.insertAccount(jdbcTemplate);
-            LedgerLine ledgerLine1 = new LedgerLine(account1, Currency.EUR, new BigDecimal("10.0"));
-            LedgerLine ledgerLine2 = new LedgerLine(UUID.randomUUID(), Currency.EUR, new BigDecimal("-10.0"));
+            LedgerLine ledgerLine1 = new LedgerLine(account1, Money.of(Currency.EUR, "10.0"));
+            LedgerLine ledgerLine2 = new LedgerLine(UUID.randomUUID(), Money.of(Currency.EUR, "-10.0"));
             LedgerEntry ledgerEntry = new LedgerEntry("TEST", List.of(ledgerLine1, ledgerLine2));
             assertThatThrownBy(() -> ledgerStore.saveEntry(ledgerEntry))
                     .isInstanceOf(DataIntegrityViolationException.class)

@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -22,7 +21,7 @@ class LedgerEntryTest {
     private static final int MAX_DESCRIPTION_LENGTH = 255;
 
     private LedgerLine line(Currency c, String amount) {
-        return new LedgerLine(UUID.randomUUID(), c, new BigDecimal(amount));
+        return new LedgerLine(UUID.randomUUID(), Money.of(c, amount));
     }
 
     private LedgerEntry entry(List<LedgerLine> lines) {
@@ -173,8 +172,8 @@ class LedgerEntryTest {
         void rejectsDuplicateAccountInLines() {
             UUID id = UUID.randomUUID();
             List<LedgerLine> lines = new ArrayList<>();
-            lines.add(new LedgerLine(id, Currency.EUR, new BigDecimal("-5")));
-            lines.add(new LedgerLine(id, Currency.EUR, new BigDecimal("-5")));
+            lines.add(new LedgerLine(id, Money.of(Currency.EUR, "-5")));
+            lines.add(new LedgerLine(id, Money.of(Currency.EUR, "-5")));
             lines.add(line(Currency.EUR, "10"));
 
             assertThatThrownBy(() -> entry(lines))
@@ -192,7 +191,7 @@ class LedgerEntryTest {
             LedgerLine line2 = line(Currency.USD, "10");
             assertThatThrownBy(() -> entry(List.of(line1, line2)))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Entry does not balance for " + Currency.USD + ": total = " + new BigDecimal("5"));
+                    .hasMessageContaining("Entry does not balance for " + Currency.USD + ": total = 5.00");
         }
 
         @Test
@@ -201,7 +200,7 @@ class LedgerEntryTest {
             LedgerLine line2 = line(Currency.USD, "-10");
             assertThatThrownBy(() -> entry(List.of(line1, line2)))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Entry does not balance for");
+                    .hasMessageContaining("Entry does not balance for EUR: total = 10.00");
         }
 
         @Test
@@ -221,7 +220,7 @@ class LedgerEntryTest {
             LedgerLine line4 = line(Currency.EUR, "-30");
             assertThatThrownBy(() -> entry(List.of(line1, line2, line3, line4)))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("EUR").hasMessageContaining("total = -10");
+                    .hasMessageContaining("Entry does not balance for EUR: total = -10.00");
         }
     }
 }

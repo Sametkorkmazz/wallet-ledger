@@ -1,6 +1,5 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
-import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -82,7 +81,7 @@ class JournalLineEntityTest {
         @Test
         void storesAmountWithScaleFour() {
             JournalLineEntity journalLineEntity = new JournalLineEntity(ACCOUNT_ID, ENTRY_ID, new BigDecimal("2"));
-            assertThat(journalLineEntity.getAmount().scale()).isEqualTo(LedgerLine.MAX_SCALE);
+            assertThat(journalLineEntity.getAmount().scale()).isEqualTo(4);
         }
     }
 }

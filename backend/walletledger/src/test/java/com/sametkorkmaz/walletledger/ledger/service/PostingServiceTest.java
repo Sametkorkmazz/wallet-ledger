@@ -68,7 +68,7 @@ public class PostingServiceTest {
             ArgumentCaptor<LedgerEntry> ledgerEntryArgumentCaptor = ArgumentCaptor.forClass(LedgerEntry.class);
             verify(ledgerStore).saveEntry(ledgerEntryArgumentCaptor.capture());
             LedgerEntry saved = ledgerEntryArgumentCaptor.getValue();
-            assertThat(saved.lines()).extracting(LedgerLine::accountId, LedgerLine::currency)
+            assertThat(saved.lines()).extracting(LedgerLine::accountId, l -> l.amount().currency())
                     .containsExactlyInAnyOrder(tuple(account1.id(), account1.currency()), tuple(account2.id(), account2.currency()),
                             tuple(account3.id(), account3.currency()), tuple(account4.id(), account4.currency()));
         }
@@ -114,6 +114,20 @@ public class PostingServiceTest {
                     .isInstanceOf(AccountNotFoundException.class)
                     .hasMessageContaining("Accounts not found").hasMessageContainingAll(lineRequest3.accountId().toString(), lineRequest4.accountId().toString())
                     .hasMessageNotContainingAny(account1.id().toString(), account2.id().toString());
+            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+        }
+
+        @Test
+        void throwsOverMaxAllowedDecimals() {
+            Account account1 = createAccount(Currency.EUR);
+            Account account2 = createAccount(Currency.EUR);
+            LineRequest lineRequest1 = createLineRequest(account1.id(), new BigDecimal("10.001"));
+            LineRequest lineRequest2 = createLineRequest(account2.id(), new BigDecimal("-10.00"));
+            given(accountStore.findByIds(Set.of(lineRequest1.accountId(), lineRequest2.accountId())))
+                    .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
+            assertThatThrownBy(() -> postingService.postLedger("TEST", List.of(lineRequest1, lineRequest2)))
+                    .isInstanceOf(InvalidPostingException.class)
+                    .hasMessageContaining("EUR allows at most 2 decimal places");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
         }
 

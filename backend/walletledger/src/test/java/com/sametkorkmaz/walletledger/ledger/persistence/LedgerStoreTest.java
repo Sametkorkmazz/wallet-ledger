@@ -4,6 +4,7 @@ import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
+import com.sametkorkmaz.walletledger.ledger.domain.Money;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -30,8 +31,8 @@ class LedgerStoreTest {
     JdbcTemplate jdbcTemplate;
 
     private static LedgerEntry createTransferEntry(UUID increased, UUID decreased, String amount) {
-        LedgerLine ledgerLine1 = new LedgerLine(increased, Currency.EUR, new BigDecimal(amount));
-        LedgerLine ledgerLine2 = new LedgerLine(decreased, Currency.EUR, new BigDecimal("-" + amount));
+        LedgerLine ledgerLine1 = new LedgerLine(increased, Money.of(Currency.EUR, amount));
+        LedgerLine ledgerLine2 = new LedgerLine(decreased, Money.of(Currency.EUR, "-" + amount));
         return new LedgerEntry("TEST", List.of(ledgerLine1, ledgerLine2));
     }
 
