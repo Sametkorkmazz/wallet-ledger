@@ -8,21 +8,21 @@ export async function getBalances(): Promise<Balance[]> {
   return [
     {
       currency: "EUR",
-      amount: "1250.00",
+      amount: "2450.00",
       inThisMonth: "2800.00",
       outThisMonth: "350.00",
     },
     {
       currency: "USD",
-      amount: "830.50",
-      inThisMonth: "2800.00",
-      outThisMonth: "350.00",
+      amount: "1120.50",
+      inThisMonth: "1205.50",
+      outThisMonth: "85.00",
     },
     {
       currency: "TRY",
-      amount: "42000.00",
-      inThisMonth: "2800.00",
-      outThisMonth: "350.00",
+      amount: "38900.00",
+      inThisMonth: "4500.00",
+      outThisMonth: "0.00",
     },
   ];
 }

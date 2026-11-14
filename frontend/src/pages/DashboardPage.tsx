@@ -14,7 +14,14 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-4">
       <header className="flex items-start justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          {dataUpdatedAt > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Balances as of {lastUpdated}
+            </p>
+          )}
+        </div>
         <Button asChild>
           <Link to="/transfer">
             <Send />
@@ -32,18 +39,13 @@ export default function DashboardPage() {
           </Button>
         </div>
       ) : (
-        <>
-          <span className="text-muted-foreground ">
-            Balances as of {lastUpdated}
-          </span>
-          <ul className="grid gap-4 sm:grid-cols-3">
-            {data.map((b) => (
-              <li key={b.currency}>
-                <BalanceCard balance={b} />
-              </li>
-            ))}
-          </ul>
-        </>
+        <ul className="grid gap-4 sm:grid-cols-3">
+          {data.map((b) => (
+            <li key={b.currency}>
+              <BalanceCard balance={b} />
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

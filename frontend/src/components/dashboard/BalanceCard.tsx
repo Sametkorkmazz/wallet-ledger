@@ -24,7 +24,7 @@ export default function BalanceCard({ balance }: BalanceCardProps) {
           {formatMoney(balance.amount, balance.currency)}
         </CardTitle>
         <CardAction>
-          <span className="rounded-md bg-primary/12 px-3.5 py-2 text-[16px] font-medium text-primary">
+          <span className="rounded-md bg-primary/12 px-3.5 py-2 text-base font-medium text-primary">
             {CURRENCY_SYMBOL[balance.currency]}
           </span>
         </CardAction>
