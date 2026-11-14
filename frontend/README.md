@@ -16,7 +16,7 @@ npm run dev      # http://localhost:5173
 ```
 
 | Script            | What it does                       |
-|-------------------|------------------------------------|
+| ----------------- | ---------------------------------- |
 | `npm run dev`     | Start the dev server               |
 | `npm run build`   | Type-check and build for release   |
 | `npm run lint`    | Run ESLint                         |
