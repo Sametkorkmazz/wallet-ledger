@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, Wallet } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const highlights = [
   "Every transfer has a unique reference, so a retry never pays twice.",
@@ -16,6 +16,8 @@ const highlights = [
 
 export default function AuthPage() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const tab = pathname === "/signup" ? "signup" : "signin";
 
   return (
     <main className="min-h-screen bg-background relative flex flex-wrap items-center justify-center gap-12 p-8">
@@ -24,7 +26,7 @@ export default function AuthPage() {
       </div>
       <div className="max-w-md flex flex-col gap-5">
         <div className="flex items-center gap-2">
-          <span className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Wallet className="size-5" />
           </span>
           <span className="font-medium">Wallet &amp; Ledger</span>
@@ -44,7 +46,13 @@ export default function AuthPage() {
 
       <Card className="w-full max-w-md shadow-none">
         <CardContent className="flex flex-col gap-5">
-          <Tabs defaultValue="signin" className="flex-col">
+          <Tabs
+            value={tab}
+            onValueChange={(v) =>
+              navigate(v === "signup" ? "/signup" : "/login")
+            }
+            className="flex-col"
+          >
             <TabsList className="grid w-full grid-cols-2 group-data-horizontal/tabs:h-12">
               <TabsTrigger
                 value="signin"
