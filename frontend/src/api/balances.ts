@@ -6,8 +6,23 @@ const delay = (ms: number) =>
 export async function getBalances(): Promise<Balance[]> {
   await delay(500); // TODO: replace with GET /api/balances (Dec 7 week)
   return [
-    { currency: "EUR", amount: "1250.00" },
-    { currency: "USD", amount: "830.50" },
-    { currency: "TRY", amount: "42000.00" },
+    {
+      currency: "EUR",
+      amount: "1250.00",
+      inThisMonth: "2800.00",
+      outThisMonth: "350.00",
+    },
+    {
+      currency: "USD",
+      amount: "830.50",
+      inThisMonth: "2800.00",
+      outThisMonth: "350.00",
+    },
+    {
+      currency: "TRY",
+      amount: "42000.00",
+      inThisMonth: "2800.00",
+      outThisMonth: "350.00",
+    },
   ];
 }

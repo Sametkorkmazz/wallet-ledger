@@ -16,13 +16,15 @@ const navClass: (props: NavLinkRenderProps) => string = ({ isActive }) =>
     ? "bg-primary/12 text-foreground font-medium"
     : "text-muted-foreground hover:text-foreground hover:bg-muted");
 
+const container = "mx-auto w-full max-w-7xl px-6";
+
 export default function AppLayout() {
   const { email } = useAuth();
 
   return (
     <div className="min-h-screen bg-muted/40">
       <header className="border-b bg-background">
-        <div className="mx-auto flex h-14 items-center max-w-5xl gap-6 px-4">
+        <div className={`${container} flex h-14 items-center gap-6`}>
           <Link
             to="/dashboard"
             className="flex items-center gap-2 font-semibold"
@@ -47,13 +49,13 @@ export default function AppLayout() {
               History
             </NavLink>
           </nav>
-          <div className="flex items-center gap-3 ml-auto">
+          <div className="ml-auto flex items-center gap-3">
             <Avatar className="size-8">
               <AvatarFallback className="text-xs">
                 {email.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <span className="text-sm hidden sm:inline">{email}</span>
+            <span className="hidden text-sm sm:inline">{email}</span>
             <Button variant="ghost" size="sm">
               <LogOut />
               Sign out
@@ -62,7 +64,7 @@ export default function AppLayout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-8">
+      <main className={`${container} py-8`}>
         <Outlet />
       </main>
     </div>
