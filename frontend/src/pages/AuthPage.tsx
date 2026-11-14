@@ -20,18 +20,18 @@ export default function AuthPage() {
   const tab = pathname === "/signup" ? "signup" : "signin";
 
   return (
-    <main className="min-h-screen bg-background relative flex flex-wrap items-center justify-center gap-12 p-8">
-      <div className="absolute right-4 top-4">
+    <main className="relative flex min-h-screen flex-wrap items-center justify-center gap-12 bg-background p-8">
+      <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
-      <div className="max-w-md flex flex-col gap-5">
+      <div className="flex max-w-md flex-col gap-5">
         <div className="flex items-center gap-2">
           <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Wallet className="size-5" />
           </span>
           <span className="font-medium">Wallet &amp; Ledger</span>
         </div>
-        <h1 className="text-[40px] tracking-tight leading-12 font-bold">
+        <h1 className="text-[40px] leading-12 font-bold tracking-tight">
           Hold EUR, USD and TRY. Send money to other users.
         </h1>
         <ul className="mt-3 flex flex-col gap-3 text-muted-foreground">
