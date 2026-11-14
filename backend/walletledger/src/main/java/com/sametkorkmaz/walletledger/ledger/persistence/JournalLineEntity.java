@@ -1,6 +1,5 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
-import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -13,6 +12,10 @@ import java.util.UUID;
 @Table(name = "journal_lines")
 @Getter
 class JournalLineEntity {
+
+    static final int AMOUNT_SCALE = 4;
+    static final int AMOUNT_PRECISION = 19;
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -23,7 +26,7 @@ class JournalLineEntity {
     @Column(name = "entry_id", nullable = false)
     private UUID entryId;
 
-    @Column(name = "amount", nullable = false, precision = LedgerLine.MAX_DIGITS + LedgerLine.MAX_SCALE, scale = LedgerLine.MAX_SCALE)
+    @Column(name = "amount", nullable = false, precision = AMOUNT_PRECISION, scale = AMOUNT_SCALE)
     private BigDecimal amount;
 
     protected JournalLineEntity() {
@@ -36,9 +39,9 @@ class JournalLineEntity {
         this.accountId = accountId;
         this.entryId = entryId;
         try {
-            this.amount = amount.setScale(LedgerLine.MAX_SCALE, RoundingMode.UNNECESSARY);
+            this.amount = amount.setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
         } catch (ArithmeticException e) {
-            throw new IllegalArgumentException("amount must have at most %d decimal places".formatted(LedgerLine.MAX_SCALE), e);
+            throw new IllegalArgumentException("amount must have at most %d decimal places".formatted(AMOUNT_SCALE), e);
         }
     }
 }

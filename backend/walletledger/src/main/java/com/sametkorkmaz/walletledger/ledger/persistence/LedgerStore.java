@@ -26,7 +26,7 @@ public class LedgerStore {
         journalEntryEntity = journalEntryRepository.saveAndFlush(journalEntryEntity);
         List<JournalLineEntity> lines = new ArrayList<>();
         for (LedgerLine line : ledgerEntry.lines()) {
-            lines.add(new JournalLineEntity(line.accountId(), journalEntryEntity.getId(), line.amount()));
+            lines.add(new JournalLineEntity(line.accountId(), journalEntryEntity.getId(), line.amount().amount()));
         }
         journalLineRepository.saveAllAndFlush(lines);
         return journalEntryEntity.getId();

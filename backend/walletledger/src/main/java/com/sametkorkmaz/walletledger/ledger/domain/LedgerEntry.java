@@ -1,6 +1,5 @@
 package com.sametkorkmaz.walletledger.ledger.domain;
 
-import java.math.BigDecimal;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -44,13 +43,13 @@ public record LedgerEntry(String description, List<LedgerLine> lines) {
         if (lines.stream().map(LedgerLine::accountId).distinct().count() != lines.size()) {
             throw new IllegalArgumentException("Entry must not contain duplicate accounts");
         }
-        EnumMap<Currency, BigDecimal> totals = new EnumMap<>(Currency.class);
+        EnumMap<Currency, Money> totals = new EnumMap<>(Currency.class);
         for (LedgerLine line : lines) {
-            totals.merge(line.currency(), line.amount(), BigDecimal::add);
+            totals.merge(line.amount().currency(), line.amount(), Money::add);
         }
-        for (Map.Entry<Currency, BigDecimal> currencyTotal : totals.entrySet()) {
-            if (currencyTotal.getValue().compareTo(BigDecimal.ZERO) != 0) {
-                throw new IllegalArgumentException("Entry does not balance for " + currencyTotal.getKey() + ": total = " + currencyTotal.getValue());
+        for (Map.Entry<Currency, Money> currencyTotal : totals.entrySet()) {
+            if (!currencyTotal.getValue().isZero()) {
+                throw new IllegalArgumentException("Entry does not balance for " + currencyTotal.getKey() + ": total = " + currencyTotal.getValue().amount());
             }
         }
     }

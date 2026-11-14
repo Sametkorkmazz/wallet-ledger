@@ -3,6 +3,7 @@ package com.sametkorkmaz.walletledger.ledger.service;
 import com.sametkorkmaz.walletledger.ledger.domain.Account;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
+import com.sametkorkmaz.walletledger.ledger.domain.Money;
 import com.sametkorkmaz.walletledger.ledger.persistence.AccountStore;
 import com.sametkorkmaz.walletledger.ledger.persistence.LedgerStore;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,8 @@ public class PostingService {
         LedgerEntry entry;
         try {
             for (LineRequest lineRequest : lineRequests) {
-                LedgerLine line = new LedgerLine(lineRequest.accountId(), accounts.get(lineRequest.accountId()).currency(), lineRequest.amount());
+                LedgerLine line = new LedgerLine(lineRequest.accountId(),
+                        new Money(accounts.get(lineRequest.accountId()).currency(), lineRequest.amount()));
                 lines.add(line);
             }
             entry = new LedgerEntry(description, lines);
