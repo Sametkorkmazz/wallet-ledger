@@ -1,6 +1,7 @@
 package com.sametkorkmaz.walletledger;
 
 import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
+import com.sametkorkmaz.walletledger.ledger.persistence.TestData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -47,9 +48,15 @@ class LedgerSchemaTest {
                 entryType, reversesEntryId);
     }
 
+    private void insertKey(UUID userId, UUID key) {
+        jdbcTemplate.update("INSERT INTO idempotency_keys (user_id, idempotency_key, request_hash) VALUES (?, ?, ?)",
+                userId, key, "a".repeat(64));
+    }
+
     @BeforeEach
     void cleanTables() {
-        jdbcTemplate.batchUpdate("DELETE FROM journal_lines;",
+        jdbcTemplate.batchUpdate("DELETE FROM idempotency_keys;",
+                "DELETE FROM journal_lines;",
                 "DELETE FROM journal_entries;",
                 "DELETE FROM accounts;",
                 "DELETE FROM users;");
@@ -277,6 +284,80 @@ class LedgerSchemaTest {
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (id, description, entry_type, reverses_entry_id) VALUES (?, 'TEST', 'REVERSAL', ?)", id, id))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("ck_journal_entries_not_self_reversal");
+        }
+    }
+
+    @Nested
+    @DisplayName("idempotency_test")
+    class IdempotencyKeys {
+        @Test
+        void keyRowWithoutResponseAccepted() {
+            UUID userId = TestData.insertUser(jdbcTemplate);
+            UUID key = UUID.randomUUID();
+            insertKey(userId, key);
+            assertThat(jdbcTemplate.queryForObject("SELECT entry_id FROM idempotency_keys WHERE user_id = ? AND idempotency_key = ?", UUID.class, userId, key)).isNull();
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE user_id = ? AND idempotency_key = ?", Integer.class,
+                    userId, key);
+            assertThat(count).isEqualTo(1);
+        }
+
+        @Test
+        void duplicateKeyForSameUserRejected() {
+            UUID userId = TestData.insertUser(jdbcTemplate);
+            UUID key = UUID.randomUUID();
+            insertKey(userId, key);
+            assertThatThrownBy(() -> insertKey(userId, key))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("pk_idempotency_keys");
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE user_id = ? AND idempotency_key = ?", Integer.class,
+                    userId, key);
+            assertThat(count).isEqualTo(1);
+        }
+
+        @Test
+        void sameKeyForDifferentUsersAccepted() {
+            UUID userId1 = TestData.insertUser(jdbcTemplate);
+            UUID userId2 = TestData.insertUser(jdbcTemplate);
+            UUID key = UUID.randomUUID();
+            insertKey(userId1, key);
+            insertKey(userId2, key);
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE idempotency_key = ?", Integer.class, key);
+            assertThat(count).isEqualTo(2);
+        }
+
+        @Test
+        void missingRequestHashRejected() {
+            UUID userId = TestData.insertUser(jdbcTemplate);
+            UUID key = UUID.randomUUID();
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO idempotency_keys (user_id, idempotency_key) VALUES (?, ?)", userId, key))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("violates not-null constraint")
+                    .hasMessageContaining("null value in column \"request_hash\"");
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE idempotency_key = ? AND user_id = ?", Integer.class, key, userId);
+            assertThat(count).isEqualTo(0);
+        }
+
+        @Test
+        void unknownUserRejected() {
+            UUID key = UUID.randomUUID();
+            UUID unknownUserId = UUID.randomUUID();
+            assertThatThrownBy(() -> insertKey(unknownUserId, key))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("fk_idempotency_keys_users");
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE user_id = ? AND idempotency_key = ?", Integer.class, unknownUserId, key);
+            assertThat(count).isEqualTo(0);
+        }
+
+        @Test
+        void unknownEntryRejected() {
+            UUID userId = TestData.insertUser(jdbcTemplate);
+            UUID key = UUID.randomUUID();
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO idempotency_keys (user_id, idempotency_key, request_hash, entry_id) VALUES (?, ?, ?, ?)",
+                    userId, key, "a".repeat(64), UUID.randomUUID()))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("fk_idempotency_keys_journal_entries");
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE user_id = ? AND idempotency_key = ?", Integer.class, userId, key);
+            assertThat(count).isEqualTo(0);
         }
     }
 }
