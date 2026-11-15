@@ -39,7 +39,7 @@ export default function DashboardPage() {
           </Button>
         </div>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-3">
+        <ul className="grid grid-cols-[repeat(auto-fit,minmax(--spacing(70),1fr))] gap-4">
           {data.map((b) => (
             <li key={b.currency}>
               <BalanceCard balance={b} />
