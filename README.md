@@ -124,6 +124,7 @@ erDiagram
 Decisions are recorded as architecture decision records in [`docs/adr`](docs/adr):
 
 - [0001: Double-entry ledger](docs/adr/0001-double-entry-ledger.md)
+- [0002: Idempotent transfers](docs/adr/0002-idempotency.md) (proposed)
 - [0004: Money type and rounding](docs/adr/0004-money-type-and-rounding.md) (proposed)
 
 ## Testing
