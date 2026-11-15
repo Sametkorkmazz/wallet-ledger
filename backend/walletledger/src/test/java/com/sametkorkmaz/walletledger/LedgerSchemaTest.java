@@ -1,10 +1,12 @@
 package com.sametkorkmaz.walletledger;
 
+import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -38,6 +40,11 @@ class LedgerSchemaTest {
     private UUID insertEntry(String description) {
         return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description, entry_type) VALUES (?, 'TRANSFER') RETURNING id", UUID.class,
                 description);
+    }
+
+    private UUID insertEntry(String entryType, UUID reversesEntryId) {
+        return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description, entry_type, reverses_entry_id) VALUES ('TEST', ?, ?) RETURNING id", UUID.class,
+                entryType, reversesEntryId);
     }
 
     @BeforeEach
@@ -187,13 +194,14 @@ class LedgerSchemaTest {
     }
 
     @Nested
-    @DisplayName("Journal entries")
-    class JournalEntry {
+    @DisplayName("journal_entries")
+    class JournalEntries {
         @Test
         void descriptionNullRejected() {
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description, entry_type) VALUES (NULL, 'TRANSFER')"))
                     .isInstanceOf(DataIntegrityViolationException.class)
-                    .hasMessageContaining("violates not-null constraint");
+                    .hasMessageContaining("violates not-null constraint")
+                    .hasMessageContaining("null value in column \"description\"");
         }
 
         @Test
@@ -208,6 +216,67 @@ class LedgerSchemaTest {
             String savedDescription = assertDoesNotThrow(() -> jdbcTemplate.queryForObject("INSERT INTO journal_entries (description, entry_type) VALUES (?, 'TRANSFER') RETURNING description",
                     String.class, "A".repeat(MAX_DESCRIPTION_LENGTH)));
             assertThat(savedDescription).isEqualTo("A".repeat(MAX_DESCRIPTION_LENGTH));
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = EntryType.class, names = {"TRANSFER", "TOP_UP", "SYSTEM"})
+        void validEntryTypesAccepted(EntryType entryType) {
+            UUID saved = insertEntry(entryType.name(), null);
+            assertThat(saved).isNotNull();
+        }
+
+        @Test
+        void unknownEntryTypeRejected() {
+            assertThatThrownBy(() -> insertEntry("INVALID", null))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("ck_journal_entries_entry_type");
+        }
+
+        @Test
+        void missingEntryTypeRejected() {
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description) VALUES ('TEST')"))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("violates not-null constraint")
+                    .hasMessageContaining("null value in column \"entry_type\"");
+        }
+
+        @Test
+        void reversalWithoutLinkRejected() {
+            assertThatThrownBy(() -> insertEntry(EntryType.REVERSAL.name(), null))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("ck_journal_entries_reversal_link");
+        }
+
+        @Test
+        void linkWithoutReversalRejected() {
+            UUID saved = insertEntry(EntryType.TRANSFER.name(), null);
+            assertThatThrownBy(() -> insertEntry(EntryType.TRANSFER.name(), saved))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("ck_journal_entries_reversal_link");
+        }
+
+        @Test
+        void reversalAccepted() {
+            UUID saved = insertEntry(EntryType.TRANSFER.name(), null);
+            UUID reversesId = insertEntry(EntryType.REVERSAL.name(), saved);
+            assertThat(reversesId).isNotNull();
+        }
+
+        @Test
+        void secondReversalOfSameEntryRejected() {
+            UUID saved = insertEntry(EntryType.TRANSFER.name(), null);
+            insertEntry(EntryType.REVERSAL.name(), saved);
+            assertThatThrownBy(() -> insertEntry(EntryType.REVERSAL.name(), saved))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("uq_journal_entries_reverses_entry_id");
+        }
+
+        @Test
+        void selfReversalRejected() {
+            UUID id = UUID.randomUUID();
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (id, description, entry_type, reverses_entry_id) VALUES (?, 'TEST', 'REVERSAL', ?)", id, id))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("ck_journal_entries_not_self_reversal");
         }
     }
 }
