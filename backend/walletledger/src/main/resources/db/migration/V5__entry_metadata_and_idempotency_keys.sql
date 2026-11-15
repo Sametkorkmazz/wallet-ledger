@@ -1,7 +1,7 @@
 ALTER TABLE journal_entries
     ADD COLUMN reverses_entry_id UUID,
-    ADD COLUMN created_by        UUID        NULL,
-    ADD COLUMN entry_type        VARCHAR(20) NOT NULL DEFAULT 'SYSTEM';
+    ADD COLUMN entry_type        VARCHAR(20) NOT NULL DEFAULT 'SYSTEM',
+    ADD COLUMN created_by        UUID        NULL;
 
 ALTER TABLE journal_entries
     ALTER COLUMN entry_type DROP DEFAULT;

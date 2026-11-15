@@ -1,9 +1,6 @@
 package com.sametkorkmaz.walletledger.ledger.service;
 
-import com.sametkorkmaz.walletledger.ledger.domain.Account;
-import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
-import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
-import com.sametkorkmaz.walletledger.ledger.domain.Money;
+import com.sametkorkmaz.walletledger.ledger.domain.*;
 import com.sametkorkmaz.walletledger.ledger.persistence.AccountStore;
 import com.sametkorkmaz.walletledger.ledger.persistence.LedgerStore;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +18,7 @@ public class PostingService {
     private final AccountStore accountStore;
 
     @Transactional
-    public UUID postLedger(String description, List<LineRequest> lineRequests) {
+    public UUID postLedger(String description, EntryType entryType, List<LineRequest> lineRequests) {
         Set<UUID> accountIds = lineRequests.stream().map(LineRequest::accountId).collect(Collectors.toSet());
         Map<UUID, Account> accounts = accountStore.findByIds(accountIds);
         Set<UUID> missingIds = new HashSet<>(accountIds);
@@ -37,7 +34,7 @@ public class PostingService {
                         new Money(accounts.get(lineRequest.accountId()).currency(), lineRequest.amount()));
                 lines.add(line);
             }
-            entry = new LedgerEntry(description, lines);
+            entry = LedgerEntry.of(description, entryType, null, lines);
         } catch (IllegalArgumentException e) {
             throw new InvalidPostingException(e.getMessage());
         }
