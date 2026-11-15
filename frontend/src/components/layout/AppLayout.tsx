@@ -11,7 +11,7 @@ import {
 } from "react-router-dom";
 
 const navClass: (props: NavLinkRenderProps) => string = ({ isActive }) =>
-  "inline-flex items-center gap-2 rounded-md px-3 py-1.5 " +
+  "inline-flex items-center gap-2 rounded-md px-3 py-1.5 whitespace-nowrap " +
   (isActive
     ? "bg-primary/12 text-foreground font-medium"
     : "text-muted-foreground hover:text-foreground hover:bg-muted");
@@ -24,29 +24,29 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-muted/40">
       <header className="border-b bg-background">
-        <div className={`${container} flex h-14 items-center gap-6`}>
+        <div className={`${container} flex h-16 items-center gap-6`}>
           <Link
             to="/dashboard"
-            className="flex items-center gap-2 font-semibold"
+            className="flex items-center gap-2 font-semibold whitespace-nowrap"
           >
             <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Wallet className="size-5" />
             </span>
-            <span>Wallet &amp; Ledger</span>
+            <span className="sr-only sm:not-sr-only">Wallet &amp; Ledger</span>
           </Link>
 
           <nav aria-label="Main" className="flex gap-1 text-sm">
             <NavLink className={navClass} to="/dashboard">
               <LayoutGrid className="size-4" />
-              Dashboard
+              <span className="sr-only lg:not-sr-only">Dashboard</span>
             </NavLink>
             <NavLink className={navClass} to="/transfer">
               <Send className="size-4" />
-              Send money
+              <span className="sr-only lg:not-sr-only">Send money</span>
             </NavLink>
             <NavLink className={navClass} to="/transactions">
               <History className="size-4" />
-              History
+              <span className="sr-only lg:not-sr-only">History</span>
             </NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3">
@@ -55,10 +55,10 @@ export default function AppLayout() {
                 {email.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <span className="hidden text-sm sm:inline">{email}</span>
+            <span className="hidden text-sm xl:inline">{email}</span>
             <Button variant="ghost" size="sm">
               <LogOut />
-              Sign out
+              <span className="sr-only lg:not-sr-only">Sign out</span>
             </Button>
             <ThemeToggle />
           </div>
