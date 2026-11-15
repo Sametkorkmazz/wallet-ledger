@@ -21,6 +21,10 @@ public final class TestData {
         return jdbcTemplate.queryForObject("INSERT INTO accounts (user_id, currency) VALUES  (?,'EUR') RETURNING id", UUID.class, userId);
     }
 
+    public static UUID insertAccount(JdbcTemplate jdbcTemplate, UUID userId) {
+        return jdbcTemplate.queryForObject("INSERT INTO accounts (user_id, currency) VALUES  (?,'EUR') RETURNING id", UUID.class, userId);
+    }
+
     public static UUID insertEntry(JdbcTemplate jdbcTemplate) {
         return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description, entry_type) VALUES  ('test', 'TRANSFER') RETURNING id", UUID.class);
     }

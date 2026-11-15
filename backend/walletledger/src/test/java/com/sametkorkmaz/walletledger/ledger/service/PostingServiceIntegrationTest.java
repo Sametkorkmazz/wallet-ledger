@@ -52,7 +52,10 @@ public class PostingServiceIntegrationTest {
             UUID account2 = TestData.insertAccount(jdbcTemplate);
             LineRequest lineRequest1 = createLineRequest(account1, new BigDecimal("100"));
             LineRequest lineRequest2 = createLineRequest(account2, new BigDecimal("-100"));
-            postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2));
+            UUID saved = postingService.postLedger("TEST", EntryType.TOP_UP, List.of(lineRequest1, lineRequest2));
+            String entryType = jdbcTemplate.queryForObject(
+                    "SELECT entry_type FROM journal_entries WHERE id = ?", String.class, saved);
+            assertThat(entryType).isEqualTo("TOP_UP");
             BigDecimal line1Balance = ledgerStore.balanceOf(account1);
             BigDecimal line2Balance = ledgerStore.balanceOf(account2);
             assertThat(line1Balance).isEqualByComparingTo(new BigDecimal("100"));
@@ -64,7 +67,7 @@ public class PostingServiceIntegrationTest {
             UUID account1 = TestData.insertAccount(jdbcTemplate);
             LineRequest lineRequest1 = createLineRequest(account1, new BigDecimal("100"));
             LineRequest lineRequest2 = createLineRequest(UUID.randomUUID(), new BigDecimal("-100"));
-            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
+            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TOP_UP, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(AccountNotFoundException.class);
             int lines = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM journal_lines", Integer.class);
             int entries = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM journal_entries", Integer.class);

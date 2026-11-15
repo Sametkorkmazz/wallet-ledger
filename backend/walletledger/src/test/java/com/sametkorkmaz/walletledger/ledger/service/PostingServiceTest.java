@@ -75,6 +75,21 @@ public class PostingServiceTest {
         }
 
         @Test
+        void entryTypeComesFromService() {
+            Account account1 = createAccount(Currency.EUR);
+            Account account2 = createAccount(Currency.EUR);
+            LineRequest lineRequest1 = createLineRequest(account1.id(), new BigDecimal("10"));
+            LineRequest lineRequest2 = createLineRequest(account2.id(), new BigDecimal("-10"));
+            given(accountStore.findByIds(Set.of(lineRequest1.accountId(), lineRequest2.accountId())))
+                    .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
+            postingService.postLedger("TEST", EntryType.TOP_UP, List.of(lineRequest1, lineRequest2));
+            ArgumentCaptor<LedgerEntry> ledgerEntryArgumentCaptor = ArgumentCaptor.forClass(LedgerEntry.class);
+            verify(ledgerStore).saveEntry(ledgerEntryArgumentCaptor.capture());
+            LedgerEntry saved = ledgerEntryArgumentCaptor.getValue();
+            assertThat(saved.entryType()).isEqualTo(EntryType.TOP_UP);
+        }
+
+        @Test
         void returnsSavedEntryId() {
             Account account1 = createAccount(Currency.EUR);
             Account account2 = createAccount(Currency.EUR);
@@ -98,6 +113,20 @@ public class PostingServiceTest {
             assertThatThrownBy(() -> postingService.postLedger(null, EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessageContaining("description must not be null");
+            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+        }
+
+        @Test
+        void throwsNullEntryType() {
+            Account account1 = createAccount(Currency.EUR);
+            Account account2 = createAccount(Currency.EUR);
+            LineRequest lineRequest1 = createLineRequest(account1.id(), new BigDecimal("10"));
+            LineRequest lineRequest2 = createLineRequest(account2.id(), new BigDecimal("-10"));
+            given(accountStore.findByIds(Set.of(lineRequest1.accountId(), lineRequest2.accountId())))
+                    .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
+            assertThatThrownBy(() -> postingService.postLedger("TEST", null, List.of(lineRequest1, lineRequest2)))
+                    .isInstanceOf(NullPointerException.class)
+                    .hasMessageContaining("entryType must not be null");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
         }
 
