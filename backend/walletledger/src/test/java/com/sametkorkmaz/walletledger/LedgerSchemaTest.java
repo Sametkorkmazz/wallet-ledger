@@ -1,10 +1,13 @@
 package com.sametkorkmaz.walletledger;
 
+import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
+import com.sametkorkmaz.walletledger.ledger.persistence.TestData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,13 +39,24 @@ class LedgerSchemaTest {
     }
 
     private UUID insertEntry(String description) {
-        return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description) VALUES (?) RETURNING id", UUID.class,
+        return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description, entry_type) VALUES (?, 'TRANSFER') RETURNING id", UUID.class,
                 description);
+    }
+
+    private UUID insertEntry(String entryType, UUID reversesEntryId) {
+        return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description, entry_type, reverses_entry_id) VALUES ('TEST', ?, ?) RETURNING id", UUID.class,
+                entryType, reversesEntryId);
+    }
+
+    private void insertKey(UUID userId, UUID key) {
+        jdbcTemplate.update("INSERT INTO idempotency_keys (user_id, idempotency_key, request_hash) VALUES (?, ?, ?)",
+                userId, key, "a".repeat(64));
     }
 
     @BeforeEach
     void cleanTables() {
-        jdbcTemplate.batchUpdate("DELETE FROM journal_lines;",
+        jdbcTemplate.batchUpdate("DELETE FROM idempotency_keys;",
+                "DELETE FROM journal_lines;",
                 "DELETE FROM journal_entries;",
                 "DELETE FROM accounts;",
                 "DELETE FROM users;");
@@ -187,27 +201,163 @@ class LedgerSchemaTest {
     }
 
     @Nested
-    @DisplayName("Journal entries")
-    class JournalEntry {
+    @DisplayName("journal_entries")
+    class JournalEntries {
         @Test
         void descriptionNullRejected() {
-            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description) VALUES (NULL)"))
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description, entry_type) VALUES (NULL, 'TRANSFER')"))
                     .isInstanceOf(DataIntegrityViolationException.class)
-                    .hasMessageContaining("violates not-null constraint");
+                    .hasMessageContaining("violates not-null constraint")
+                    .hasMessageContaining("null value in column \"description\"");
         }
 
         @Test
         void descriptionOverMaxLengthRejected() {
-            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description) VALUES (?)", "A".repeat(MAX_DESCRIPTION_LENGTH + 1)))
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description, entry_type) VALUES (?, 'TRANSFER')", "A".repeat(MAX_DESCRIPTION_LENGTH + 1)))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("value too long for type character varying(255)");
         }
 
         @Test
         void descriptionAtMaxLengthAccepted() {
-            String savedDescription = assertDoesNotThrow(() -> jdbcTemplate.queryForObject("INSERT INTO journal_entries (description) VALUES (?) RETURNING description",
+            String savedDescription = assertDoesNotThrow(() -> jdbcTemplate.queryForObject("INSERT INTO journal_entries (description, entry_type) VALUES (?, 'TRANSFER') RETURNING description",
                     String.class, "A".repeat(MAX_DESCRIPTION_LENGTH)));
             assertThat(savedDescription).isEqualTo("A".repeat(MAX_DESCRIPTION_LENGTH));
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = EntryType.class, names = {"TRANSFER", "TOP_UP", "SYSTEM"})
+        void validEntryTypesAccepted(EntryType entryType) {
+            UUID saved = insertEntry(entryType.name(), null);
+            assertThat(saved).isNotNull();
+        }
+
+        @Test
+        void unknownEntryTypeRejected() {
+            assertThatThrownBy(() -> insertEntry("INVALID", null))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("ck_journal_entries_entry_type");
+        }
+
+        @Test
+        void missingEntryTypeRejected() {
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description) VALUES ('TEST')"))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("violates not-null constraint")
+                    .hasMessageContaining("null value in column \"entry_type\"");
+        }
+
+        @Test
+        void reversalWithoutLinkRejected() {
+            assertThatThrownBy(() -> insertEntry(EntryType.REVERSAL.name(), null))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("ck_journal_entries_reversal_link");
+        }
+
+        @Test
+        void linkWithoutReversalRejected() {
+            UUID saved = insertEntry(EntryType.TRANSFER.name(), null);
+            assertThatThrownBy(() -> insertEntry(EntryType.TRANSFER.name(), saved))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("ck_journal_entries_reversal_link");
+        }
+
+        @Test
+        void reversalAccepted() {
+            UUID saved = insertEntry(EntryType.TRANSFER.name(), null);
+            UUID reversesId = insertEntry(EntryType.REVERSAL.name(), saved);
+            assertThat(reversesId).isNotNull();
+        }
+
+        @Test
+        void secondReversalOfSameEntryRejected() {
+            UUID saved = insertEntry(EntryType.TRANSFER.name(), null);
+            insertEntry(EntryType.REVERSAL.name(), saved);
+            assertThatThrownBy(() -> insertEntry(EntryType.REVERSAL.name(), saved))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("uq_journal_entries_reverses_entry_id");
+        }
+
+        @Test
+        void selfReversalRejected() {
+            UUID id = UUID.randomUUID();
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (id, description, entry_type, reverses_entry_id) VALUES (?, 'TEST', 'REVERSAL', ?)", id, id))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("ck_journal_entries_not_self_reversal");
+        }
+    }
+
+    @Nested
+    @DisplayName("idempotency_test")
+    class IdempotencyKeys {
+        @Test
+        void keyRowWithoutResponseAccepted() {
+            UUID userId = TestData.insertUser(jdbcTemplate);
+            UUID key = UUID.randomUUID();
+            insertKey(userId, key);
+            assertThat(jdbcTemplate.queryForObject("SELECT entry_id FROM idempotency_keys WHERE user_id = ? AND idempotency_key = ?", UUID.class, userId, key)).isNull();
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE user_id = ? AND idempotency_key = ?", Integer.class,
+                    userId, key);
+            assertThat(count).isEqualTo(1);
+        }
+
+        @Test
+        void duplicateKeyForSameUserRejected() {
+            UUID userId = TestData.insertUser(jdbcTemplate);
+            UUID key = UUID.randomUUID();
+            insertKey(userId, key);
+            assertThatThrownBy(() -> insertKey(userId, key))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("pk_idempotency_keys");
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE user_id = ? AND idempotency_key = ?", Integer.class,
+                    userId, key);
+            assertThat(count).isEqualTo(1);
+        }
+
+        @Test
+        void sameKeyForDifferentUsersAccepted() {
+            UUID userId1 = TestData.insertUser(jdbcTemplate);
+            UUID userId2 = TestData.insertUser(jdbcTemplate);
+            UUID key = UUID.randomUUID();
+            insertKey(userId1, key);
+            insertKey(userId2, key);
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE idempotency_key = ?", Integer.class, key);
+            assertThat(count).isEqualTo(2);
+        }
+
+        @Test
+        void missingRequestHashRejected() {
+            UUID userId = TestData.insertUser(jdbcTemplate);
+            UUID key = UUID.randomUUID();
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO idempotency_keys (user_id, idempotency_key) VALUES (?, ?)", userId, key))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("violates not-null constraint")
+                    .hasMessageContaining("null value in column \"request_hash\"");
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE idempotency_key = ? AND user_id = ?", Integer.class, key, userId);
+            assertThat(count).isEqualTo(0);
+        }
+
+        @Test
+        void unknownUserRejected() {
+            UUID key = UUID.randomUUID();
+            UUID unknownUserId = UUID.randomUUID();
+            assertThatThrownBy(() -> insertKey(unknownUserId, key))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("fk_idempotency_keys_users");
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE user_id = ? AND idempotency_key = ?", Integer.class, unknownUserId, key);
+            assertThat(count).isEqualTo(0);
+        }
+
+        @Test
+        void unknownEntryRejected() {
+            UUID userId = TestData.insertUser(jdbcTemplate);
+            UUID key = UUID.randomUUID();
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO idempotency_keys (user_id, idempotency_key, request_hash, entry_id) VALUES (?, ?, ?, ?)",
+                    userId, key, "a".repeat(64), UUID.randomUUID()))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("fk_idempotency_keys_journal_entries");
+            int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotency_keys WHERE user_id = ? AND idempotency_key = ?", Integer.class, userId, key);
+            assertThat(count).isEqualTo(0);
         }
     }
 }

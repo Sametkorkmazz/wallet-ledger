@@ -22,7 +22,8 @@ public class LedgerStore {
      */
     @Transactional
     public UUID saveEntry(LedgerEntry ledgerEntry) {
-        JournalEntryEntity journalEntryEntity = new JournalEntryEntity(ledgerEntry.description());
+        JournalEntryEntity journalEntryEntity = new JournalEntryEntity(ledgerEntry.description(), ledgerEntry.entryType(),
+                ledgerEntry.reversesEntryId(), ledgerEntry.createdBy());
         journalEntryEntity = journalEntryRepository.saveAndFlush(journalEntryEntity);
         List<JournalLineEntity> lines = new ArrayList<>();
         for (LedgerLine line : ledgerEntry.lines()) {

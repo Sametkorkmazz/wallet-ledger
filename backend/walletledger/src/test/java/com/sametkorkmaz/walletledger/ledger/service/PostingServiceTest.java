@@ -3,6 +3,7 @@ package com.sametkorkmaz.walletledger.ledger.service;
 
 import com.sametkorkmaz.walletledger.ledger.domain.Account;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
+import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import com.sametkorkmaz.walletledger.ledger.persistence.AccountStore;
@@ -64,13 +65,28 @@ public class PostingServiceTest {
             LineRequest lineRequest4 = createLineRequest(account4.id(), new BigDecimal("30"));
             given(accountStore.findByIds(Set.of(lineRequest1.accountId(), lineRequest2.accountId(), lineRequest3.accountId(), lineRequest4.accountId())))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2, account3.id(), account3, account4.id(), account4));
-            postingService.postLedger("TEST", List.of(lineRequest1, lineRequest2, lineRequest3, lineRequest4));
+            postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2, lineRequest3, lineRequest4));
             ArgumentCaptor<LedgerEntry> ledgerEntryArgumentCaptor = ArgumentCaptor.forClass(LedgerEntry.class);
             verify(ledgerStore).saveEntry(ledgerEntryArgumentCaptor.capture());
             LedgerEntry saved = ledgerEntryArgumentCaptor.getValue();
             assertThat(saved.lines()).extracting(LedgerLine::accountId, l -> l.amount().currency())
                     .containsExactlyInAnyOrder(tuple(account1.id(), account1.currency()), tuple(account2.id(), account2.currency()),
                             tuple(account3.id(), account3.currency()), tuple(account4.id(), account4.currency()));
+        }
+
+        @Test
+        void entryTypeComesFromService() {
+            Account account1 = createAccount(Currency.EUR);
+            Account account2 = createAccount(Currency.EUR);
+            LineRequest lineRequest1 = createLineRequest(account1.id(), new BigDecimal("10"));
+            LineRequest lineRequest2 = createLineRequest(account2.id(), new BigDecimal("-10"));
+            given(accountStore.findByIds(Set.of(lineRequest1.accountId(), lineRequest2.accountId())))
+                    .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
+            postingService.postLedger("TEST", EntryType.TOP_UP, List.of(lineRequest1, lineRequest2));
+            ArgumentCaptor<LedgerEntry> ledgerEntryArgumentCaptor = ArgumentCaptor.forClass(LedgerEntry.class);
+            verify(ledgerStore).saveEntry(ledgerEntryArgumentCaptor.capture());
+            LedgerEntry saved = ledgerEntryArgumentCaptor.getValue();
+            assertThat(saved.entryType()).isEqualTo(EntryType.TOP_UP);
         }
 
         @Test
@@ -82,7 +98,7 @@ public class PostingServiceTest {
             given(accountStore.findByIds(anyCollection())).willReturn(Map.of(account1.id(), account1, account2.id(), account2));
             UUID savedEntryId = UUID.randomUUID();
             given(ledgerStore.saveEntry(any(LedgerEntry.class))).willReturn(savedEntryId);
-            UUID response = postingService.postLedger("TEST", List.of(lineRequest1, lineRequest2));
+            UUID response = postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2));
             assertThat(response).isEqualTo(savedEntryId);
         }
 
@@ -94,9 +110,23 @@ public class PostingServiceTest {
             LineRequest lineRequest2 = createLineRequest(account2.id(), new BigDecimal("-10"));
             given(accountStore.findByIds(Set.of(lineRequest1.accountId(), lineRequest2.accountId())))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
-            assertThatThrownBy(() -> postingService.postLedger(null, List.of(lineRequest1, lineRequest2)))
+            assertThatThrownBy(() -> postingService.postLedger(null, EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessageContaining("description must not be null");
+            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+        }
+
+        @Test
+        void throwsNullEntryType() {
+            Account account1 = createAccount(Currency.EUR);
+            Account account2 = createAccount(Currency.EUR);
+            LineRequest lineRequest1 = createLineRequest(account1.id(), new BigDecimal("10"));
+            LineRequest lineRequest2 = createLineRequest(account2.id(), new BigDecimal("-10"));
+            given(accountStore.findByIds(Set.of(lineRequest1.accountId(), lineRequest2.accountId())))
+                    .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
+            assertThatThrownBy(() -> postingService.postLedger("TEST", null, List.of(lineRequest1, lineRequest2)))
+                    .isInstanceOf(NullPointerException.class)
+                    .hasMessageContaining("entryType must not be null");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
         }
 
@@ -110,7 +140,7 @@ public class PostingServiceTest {
             LineRequest lineRequest4 = createLineRequest(UUID.randomUUID(), new BigDecimal("-20"));
             given(accountStore.findByIds(Set.of(lineRequest1.accountId(), lineRequest2.accountId(), lineRequest3.accountId(), lineRequest4.accountId())))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
-            assertThatThrownBy(() -> postingService.postLedger("TEST", List.of(lineRequest1, lineRequest2, lineRequest3, lineRequest4)))
+            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2, lineRequest3, lineRequest4)))
                     .isInstanceOf(AccountNotFoundException.class)
                     .hasMessageContaining("Accounts not found").hasMessageContainingAll(lineRequest3.accountId().toString(), lineRequest4.accountId().toString())
                     .hasMessageNotContainingAny(account1.id().toString(), account2.id().toString());
@@ -125,7 +155,7 @@ public class PostingServiceTest {
             LineRequest lineRequest2 = createLineRequest(account2.id(), new BigDecimal("-10.00"));
             given(accountStore.findByIds(Set.of(lineRequest1.accountId(), lineRequest2.accountId())))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
-            assertThatThrownBy(() -> postingService.postLedger("TEST", List.of(lineRequest1, lineRequest2)))
+            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(InvalidPostingException.class)
                     .hasMessageContaining("EUR allows at most 2 decimal places");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
@@ -139,7 +169,7 @@ public class PostingServiceTest {
             LineRequest lineRequest2 = createLineRequest(account2.id(), new BigDecimal("-120"));
             given(accountStore.findByIds(Set.of(lineRequest1.accountId(), lineRequest2.accountId())))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
-            assertThatThrownBy(() -> postingService.postLedger("TEST", List.of(lineRequest1, lineRequest2)))
+            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(InvalidPostingException.class)
                     .hasMessageContaining("Entry does not balance for");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
@@ -153,7 +183,7 @@ public class PostingServiceTest {
             LineRequest lineRequest2 = createLineRequest(account2.id(), new BigDecimal("-10"));
             given(accountStore.findByIds(Set.of(lineRequest1.accountId(), lineRequest2.accountId())))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
-            assertThatThrownBy(() -> postingService.postLedger("TEST", List.of(lineRequest1, lineRequest2)))
+            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(InvalidPostingException.class)
                     .hasMessageContaining("Entry does not balance for");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
@@ -166,7 +196,7 @@ public class PostingServiceTest {
             LineRequest lineRequest2 = createLineRequest(account1.id(), new BigDecimal("-10"));
             given(accountStore.findByIds(Set.of(lineRequest1.accountId())))
                     .willReturn(Map.of(account1.id(), account1));
-            assertThatThrownBy(() -> postingService.postLedger("TEST", List.of(lineRequest1, lineRequest2)))
+            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(InvalidPostingException.class)
                     .hasMessageContaining("Entry must not contain duplicate accounts");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
@@ -181,7 +211,7 @@ public class PostingServiceTest {
             given(accountStore.findByIds(anyCollection()))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
             given(ledgerStore.saveEntry(any())).willThrow(new IllegalArgumentException("bug"));
-            assertThatThrownBy(() -> postingService.postLedger("TEST", List.of(lineRequest1, lineRequest2)))
+            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("bug");
         }

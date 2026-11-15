@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
@@ -24,12 +25,18 @@ class LedgerEntryTest {
         return new LedgerLine(UUID.randomUUID(), Money.of(c, amount));
     }
 
+    private LedgerEntry entry(EntryType entryType, UUID reversesEntryId) {
+        LedgerLine line1 = line(Currency.EUR, "10");
+        LedgerLine line2 = line(Currency.EUR, "-10");
+        return new LedgerEntry("TEST", entryType, reversesEntryId, null, List.of(line1, line2));
+    }
+
     private LedgerEntry entry(List<LedgerLine> lines) {
-        return new LedgerEntry("TEST", lines);
+        return LedgerEntry.of("TEST", EntryType.TRANSFER, null, lines);
     }
 
     private LedgerEntry entry(String description, List<LedgerLine> lines) {
-        return new LedgerEntry(description, lines);
+        return LedgerEntry.of(description, EntryType.TRANSFER, null, lines);
     }
 
     @Nested
@@ -221,6 +228,48 @@ class LedgerEntryTest {
             assertThatThrownBy(() -> entry(List.of(line1, line2, line3, line4)))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Entry does not balance for EUR: total = -10.00");
+        }
+    }
+
+    @Nested
+    @DisplayName("Entry type")
+    class EntryTypeTest {
+        @ParameterizedTest
+        @EnumSource(value = EntryType.class, names = {"TRANSFER", "TOP_UP", "SYSTEM"})
+        void acceptsNullReversesEntryIdForNonReversalTypes(EntryType entryType) {
+            LedgerEntry ledgerEntry = entry(entryType, null);
+            assertThat(ledgerEntry.entryType()).isEqualTo(entryType);
+            assertThat(ledgerEntry.reversesEntryId()).isNull();
+        }
+
+        @Test
+        void returnsReversesEntryIdForReversal() {
+            UUID reversesEntryId = UUID.randomUUID();
+            LedgerEntry ledgerEntry = entry(EntryType.REVERSAL, reversesEntryId);
+            assertThat(ledgerEntry.entryType()).isEqualTo(EntryType.REVERSAL);
+            assertThat(ledgerEntry.reversesEntryId()).isEqualTo(reversesEntryId);
+        }
+
+        @Test
+        void rejectsNullReversesEntryIdForReversal() {
+            assertThatThrownBy(() -> entry(EntryType.REVERSAL, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("reversesEntryId is required for REVERSAL and not allowed for other types");
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = EntryType.class, names = {"TRANSFER", "TOP_UP", "SYSTEM"})
+        void rejectsReversesEntryIdForNonReversalTypes(EntryType entryType) {
+            assertThatThrownBy(() -> entry(entryType, UUID.randomUUID()))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("reversesEntryId is required for REVERSAL and not allowed for other types");
+        }
+
+        @Test
+        void rejectsNullEntryType() {
+            assertThatThrownBy(() -> entry((EntryType) null, null))
+                    .isInstanceOf(NullPointerException.class)
+                    .hasMessage("entryType must not be null");
         }
     }
 }
