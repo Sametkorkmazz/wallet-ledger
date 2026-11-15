@@ -1,6 +1,7 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
+import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ class JournalEntryRepositoryTest {
     TestEntityManager testEntityManager;
 
     private static JournalEntryEntity createEntry(String description) {
-        return new JournalEntryEntity(description);
+        return new JournalEntryEntity(description, EntryType.TRANSFER, null, null);
     }
 
     @Nested

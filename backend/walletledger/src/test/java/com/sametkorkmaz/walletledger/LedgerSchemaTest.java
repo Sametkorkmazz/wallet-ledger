@@ -36,7 +36,7 @@ class LedgerSchemaTest {
     }
 
     private UUID insertEntry(String description) {
-        return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description) VALUES (?) RETURNING id", UUID.class,
+        return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description, entry_type) VALUES (?, 'TRANSFER') RETURNING id", UUID.class,
                 description);
     }
 
@@ -191,21 +191,21 @@ class LedgerSchemaTest {
     class JournalEntry {
         @Test
         void descriptionNullRejected() {
-            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description) VALUES (NULL)"))
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description, entry_type) VALUES (NULL, 'TRANSFER')"))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("violates not-null constraint");
         }
 
         @Test
         void descriptionOverMaxLengthRejected() {
-            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description) VALUES (?)", "A".repeat(MAX_DESCRIPTION_LENGTH + 1)))
+            assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description, entry_type) VALUES (?, 'TRANSFER')", "A".repeat(MAX_DESCRIPTION_LENGTH + 1)))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("value too long for type character varying(255)");
         }
 
         @Test
         void descriptionAtMaxLengthAccepted() {
-            String savedDescription = assertDoesNotThrow(() -> jdbcTemplate.queryForObject("INSERT INTO journal_entries (description) VALUES (?) RETURNING description",
+            String savedDescription = assertDoesNotThrow(() -> jdbcTemplate.queryForObject("INSERT INTO journal_entries (description, entry_type) VALUES (?, 'TRANSFER') RETURNING description",
                     String.class, "A".repeat(MAX_DESCRIPTION_LENGTH)));
             assertThat(savedDescription).isEqualTo("A".repeat(MAX_DESCRIPTION_LENGTH));
         }

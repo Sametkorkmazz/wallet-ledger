@@ -25,11 +25,11 @@ class LedgerEntryTest {
     }
 
     private LedgerEntry entry(List<LedgerLine> lines) {
-        return new LedgerEntry("TEST", lines);
+        return LedgerEntry.of("TEST", EntryType.TRANSFER, null, lines);
     }
 
     private LedgerEntry entry(String description, List<LedgerLine> lines) {
-        return new LedgerEntry(description, lines);
+        return LedgerEntry.of(description, EntryType.TRANSFER, null, lines);
     }
 
     @Nested

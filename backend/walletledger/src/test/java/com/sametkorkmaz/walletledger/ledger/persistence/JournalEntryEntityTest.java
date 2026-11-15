@@ -1,5 +1,6 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
+import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,7 @@ class JournalEntryEntityTest {
     private static final String DESCRIPTION = "TEST";
 
     private static JournalEntryEntity createEntry() {
-        return new JournalEntryEntity(DESCRIPTION);
+        return new JournalEntryEntity(DESCRIPTION, EntryType.TRANSFER, null, null);
     }
 
     @Nested
@@ -40,7 +41,7 @@ class JournalEntryEntityTest {
     class NullConstraints {
         @Test
         void rejectsNullDescription() {
-            assertThatThrownBy(() -> new JournalEntryEntity(null))
+            assertThatThrownBy(() -> new JournalEntryEntity(null, EntryType.TRANSFER, null, null))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessageContaining("description must not be null");
         }

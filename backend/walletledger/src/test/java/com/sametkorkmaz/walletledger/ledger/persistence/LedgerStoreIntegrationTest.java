@@ -2,6 +2,7 @@ package com.sametkorkmaz.walletledger.ledger.persistence;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
+import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import com.sametkorkmaz.walletledger.ledger.domain.Money;
@@ -48,7 +49,7 @@ class LedgerStoreIntegrationTest {
             UUID account2 = TestData.insertAccount(jdbcTemplate);
             LedgerLine ledgerLine1 = new LedgerLine(account1, Money.of(Currency.EUR, "10.0"));
             LedgerLine ledgerLine2 = new LedgerLine(account2, Money.of(Currency.EUR, "-10.0"));
-            LedgerEntry ledgerEntry = new LedgerEntry("TEST", List.of(ledgerLine1, ledgerLine2));
+            LedgerEntry ledgerEntry = LedgerEntry.of("TEST", EntryType.TRANSFER, null, List.of(ledgerLine1, ledgerLine2));
             ledgerStore.saveEntry(ledgerEntry);
             int entries = jdbcTemplate.queryForObject("SELECT count(*) FROM journal_entries", Integer.class);
             int lines = jdbcTemplate.queryForObject("SELECT count(*) FROM journal_lines", Integer.class);
@@ -61,7 +62,7 @@ class LedgerStoreIntegrationTest {
             UUID account1 = TestData.insertAccount(jdbcTemplate);
             LedgerLine ledgerLine1 = new LedgerLine(account1, Money.of(Currency.EUR, "10.0"));
             LedgerLine ledgerLine2 = new LedgerLine(UUID.randomUUID(), Money.of(Currency.EUR, "-10.0"));
-            LedgerEntry ledgerEntry = new LedgerEntry("TEST", List.of(ledgerLine1, ledgerLine2));
+            LedgerEntry ledgerEntry = LedgerEntry.of("TEST", EntryType.TRANSFER, null, List.of(ledgerLine1, ledgerLine2));
             assertThatThrownBy(() -> ledgerStore.saveEntry(ledgerEntry))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("fk_journal_lines_accounts");

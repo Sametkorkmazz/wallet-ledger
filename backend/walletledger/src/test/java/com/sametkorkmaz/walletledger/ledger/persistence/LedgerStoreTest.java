@@ -2,6 +2,7 @@ package com.sametkorkmaz.walletledger.ledger.persistence;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
+import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import com.sametkorkmaz.walletledger.ledger.domain.Money;
@@ -33,7 +34,7 @@ class LedgerStoreTest {
     private static LedgerEntry createTransferEntry(UUID increased, UUID decreased, String amount) {
         LedgerLine ledgerLine1 = new LedgerLine(increased, Money.of(Currency.EUR, amount));
         LedgerLine ledgerLine2 = new LedgerLine(decreased, Money.of(Currency.EUR, "-" + amount));
-        return new LedgerEntry("TEST", List.of(ledgerLine1, ledgerLine2));
+        return LedgerEntry.of("TEST", EntryType.TRANSFER, null, List.of(ledgerLine1, ledgerLine2));
     }
 
     @Nested

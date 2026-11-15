@@ -1,6 +1,7 @@
 package com.sametkorkmaz.walletledger.ledger.service;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
+import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.persistence.LedgerStore;
 import com.sametkorkmaz.walletledger.ledger.persistence.TestData;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +52,7 @@ public class PostingServiceIntegrationTest {
             UUID account2 = TestData.insertAccount(jdbcTemplate);
             LineRequest lineRequest1 = createLineRequest(account1, new BigDecimal("100"));
             LineRequest lineRequest2 = createLineRequest(account2, new BigDecimal("-100"));
-            postingService.postLedger("TEST", List.of(lineRequest1, lineRequest2));
+            postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2));
             BigDecimal line1Balance = ledgerStore.balanceOf(account1);
             BigDecimal line2Balance = ledgerStore.balanceOf(account2);
             assertThat(line1Balance).isEqualByComparingTo(new BigDecimal("100"));
@@ -63,7 +64,7 @@ public class PostingServiceIntegrationTest {
             UUID account1 = TestData.insertAccount(jdbcTemplate);
             LineRequest lineRequest1 = createLineRequest(account1, new BigDecimal("100"));
             LineRequest lineRequest2 = createLineRequest(UUID.randomUUID(), new BigDecimal("-100"));
-            assertThatThrownBy(() -> postingService.postLedger("TEST", List.of(lineRequest1, lineRequest2)))
+            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(AccountNotFoundException.class);
             int lines = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM journal_lines", Integer.class);
             int entries = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM journal_entries", Integer.class);

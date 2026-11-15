@@ -22,6 +22,6 @@ public final class TestData {
     }
 
     public static UUID insertEntry(JdbcTemplate jdbcTemplate) {
-        return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description) VALUES  ('test') RETURNING id", UUID.class);
+        return jdbcTemplate.queryForObject("INSERT INTO journal_entries (description, entry_type) VALUES  ('test','TRANSFER') RETURNING id", UUID.class);
     }
 }
