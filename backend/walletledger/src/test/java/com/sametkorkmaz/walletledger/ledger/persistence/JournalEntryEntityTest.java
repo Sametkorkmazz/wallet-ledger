@@ -1,10 +1,12 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
+import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -14,12 +16,28 @@ class JournalEntryEntityTest {
     private static final String DESCRIPTION = "TEST";
 
     private static JournalEntryEntity createEntry() {
-        return new JournalEntryEntity(DESCRIPTION);
+        return new JournalEntryEntity(DESCRIPTION, EntryType.TRANSFER, null, null);
     }
 
     @Nested
     @DisplayName("Valid construction")
     class ValidConstruction {
+        @Test
+        void keepsDescriptionAndEntryType() {
+            JournalEntryEntity entryEntity = createEntry();
+            assertThat(entryEntity.getDescription()).isEqualTo(DESCRIPTION);
+            assertThat(entryEntity.getEntryType()).isEqualTo(EntryType.TRANSFER);
+        }
+
+        @Test
+        void keepsReversesEntryIdAndCreatedBy() {
+            UUID reversesEntryId = UUID.randomUUID();
+            UUID createdBy = UUID.randomUUID();
+            JournalEntryEntity entryEntity = new JournalEntryEntity("TEST", EntryType.TRANSFER, reversesEntryId, createdBy);
+            assertThat(entryEntity.getReversesEntryId()).isEqualTo(reversesEntryId);
+            assertThat(entryEntity.getCreatedBy()).isEqualTo(createdBy);
+        }
+
         @Test
         void keepsDescriptionAndCreatedAt() {
             JournalEntryEntity entryEntity = createEntry();
@@ -40,9 +58,16 @@ class JournalEntryEntityTest {
     class NullConstraints {
         @Test
         void rejectsNullDescription() {
-            assertThatThrownBy(() -> new JournalEntryEntity(null))
+            assertThatThrownBy(() -> new JournalEntryEntity(null, EntryType.TRANSFER, null, null))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessageContaining("description must not be null");
+        }
+
+        @Test
+        void rejectsNullEntryType() {
+            assertThatThrownBy(() -> new JournalEntryEntity("TEST", null, null, null))
+                    .isInstanceOf(NullPointerException.class)
+                    .hasMessageContaining("entryType must not be null");
         }
     }
 }

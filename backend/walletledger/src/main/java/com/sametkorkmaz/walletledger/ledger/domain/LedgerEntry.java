@@ -4,6 +4,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * A balanced set of ledger lines that will be posted together.
@@ -13,11 +14,15 @@ import java.util.Objects;
  * A positive amount increases an account's balance, a negative amount decreases it.
  * The currency comes from the account and is passed in by the posting service.
  *
- * @param description human-readable reason for the entry, e.g. "top-up".
- *                    Leading and trailing whitespace is trimmed; must not be blank and at most 255 characters.
- * @param lines       at least two lines; amounts must sum to zero per currency
+ * @param description     human-readable reason for the entry, e.g. "top-up".
+ *                        Leading and trailing whitespace is trimmed; must not be blank and at most 255 characters.
+ * @param entryType       why the entry exists (TRANSFER, TOP_UP, REVERSAL, SYSTEM); must not be null
+ * @param reversesEntryId the entry this one reverses; required for REVERSAL, must be null otherwise
+ * @param createdBy       the user who started the entry; null for system entries
+ * @param lines           at least two lines; amounts must sum to zero per currency
  */
-public record LedgerEntry(String description, List<LedgerLine> lines) {
+public record LedgerEntry(String description, EntryType entryType, UUID reversesEntryId, UUID createdBy,
+                          List<LedgerLine> lines) {
 
     public static final int MAX_DESCRIPTION_LENGTH = 255;
 
@@ -31,6 +36,13 @@ public record LedgerEntry(String description, List<LedgerLine> lines) {
             throw new IllegalArgumentException("description must be at most %d characters".formatted(MAX_DESCRIPTION_LENGTH));
         }
         description = trimmedDesc;
+
+        Objects.requireNonNull(entryType, "entryType must not be null");
+        boolean isReversal = entryType == EntryType.REVERSAL;
+        boolean hasLink = reversesEntryId != null;
+        if (isReversal != hasLink) {
+            throw new IllegalArgumentException("reversesEntryId is required for REVERSAL and not allowed for other types");
+        }
 
         Objects.requireNonNull(lines, "lines must not be null");
         for (LedgerLine ledgerLine : lines) {
@@ -52,5 +64,9 @@ public record LedgerEntry(String description, List<LedgerLine> lines) {
                 throw new IllegalArgumentException("Entry does not balance for " + currencyTotal.getKey() + ": total = " + currencyTotal.getValue().amount());
             }
         }
+    }
+
+    public static LedgerEntry of(String description, EntryType entryType, UUID createdBy, List<LedgerLine> lines) {
+        return new LedgerEntry(description, entryType, null, createdBy, lines);
     }
 }

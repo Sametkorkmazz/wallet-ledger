@@ -1,6 +1,7 @@
 package com.sametkorkmaz.walletledger.ledger.service;
 
 import com.sametkorkmaz.walletledger.ledger.domain.Account;
+import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import com.sametkorkmaz.walletledger.ledger.domain.Money;
@@ -10,7 +11,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,7 +27,7 @@ public class PostingService {
     private final AccountStore accountStore;
 
     @Transactional
-    public UUID postLedger(String description, List<LineRequest> lineRequests) {
+    public UUID postLedger(String description, EntryType entryType, List<LineRequest> lineRequests) {
         Set<UUID> accountIds = lineRequests.stream().map(LineRequest::accountId).collect(Collectors.toSet());
         Map<UUID, Account> accounts = accountStore.findByIds(accountIds);
         Set<UUID> missingIds = new HashSet<>(accountIds);
@@ -37,7 +43,7 @@ public class PostingService {
                         new Money(accounts.get(lineRequest.accountId()).currency(), lineRequest.amount()));
                 lines.add(line);
             }
-            entry = new LedgerEntry(description, lines);
+            entry = LedgerEntry.of(description, entryType, null, lines);
         } catch (IllegalArgumentException e) {
             throw new InvalidPostingException(e.getMessage());
         }
