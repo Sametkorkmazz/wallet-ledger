@@ -15,11 +15,11 @@ class MigrationTest {
     JdbcTemplate jdbc;
 
     @Test
-    void usersTableExistsAfterMigration() {
-        Integer count = jdbc.queryForObject("""
-                SELECT count(*) FROM information_schema.tables
-                WHERE table_name = 'users'
+    void appliesAllMigrationsWhenApplicationStarts() {
+        Integer latestVersion = jdbc.queryForObject("""
+                SELECT max(version::int) FROM flyway_schema_history
+                WHERE success
                 """, Integer.class);
-        assertThat(count).isEqualTo(1);
+        assertThat(latestVersion).isEqualTo(5); // each migration bumps it
     }
 }
