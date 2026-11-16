@@ -33,10 +33,7 @@ class LedgerStoreIntegrationTest {
 
     @BeforeEach
     void cleanTables() {
-        jdbcTemplate.update("DELETE from journal_lines");
-        jdbcTemplate.update("DELETE from journal_entries");
-        jdbcTemplate.update("DELETE from accounts");
-        jdbcTemplate.update("DELETE from users");
+        TestData.cleanTables(jdbcTemplate);
     }
 
     @Nested

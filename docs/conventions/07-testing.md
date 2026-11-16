@@ -34,6 +34,7 @@ Helpers are private, dumb (no branching, no asserts except `assertX`), one level
 - `@ParameterizedTest` only when 4+ inputs share one assertion.
 - No test depends on another, and each one is **deterministic**: inject a fixed `Clock`, no `Thread.sleep`, no unseeded randomness.
 - Mock only I/O (stores, repositories, other features, clocks); use real domain objects, value objects and calculators.
+- Every `@SpringBootTest` class that writes or counts rows calls `TestData.cleanTables` in `@BeforeEach`. They share one cached context and database; `@DataJpaTest` classes roll back and don't need it.
 
 ## Order
 - **Members:** class annotations, constants, `@Autowired` / `@Mock` fields, `@BeforeEach` (only what every test needs), private helpers, `@Nested` groups.
