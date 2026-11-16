@@ -94,11 +94,15 @@ class LedgerStoreTest {
 
             UUID transferUser = jdbcTemplate.queryForObject("SELECT created_by FROM journal_entries WHERE id = ?", UUID.class, savedTransferId);
             UUID reversalUser = jdbcTemplate.queryForObject("SELECT created_by FROM journal_entries WHERE id = ?", UUID.class, savedReversalId);
-            UUID reversesEntryId = jdbcTemplate.queryForObject("SELECT reverses_entry_id FROM journal_entries WHERE id = ?", UUID.class, savedReversalId);
+            String transferType = jdbcTemplate.queryForObject("SELECT entry_type FROM journal_entries WHERE id = ?", String.class, savedTransferId);
+            String reversalEntry = jdbcTemplate.queryForObject("SELECT entry_type FROM journal_entries WHERE id = ?", String.class, savedReversalId);
+            UUID reversalType = jdbcTemplate.queryForObject("SELECT reverses_entry_id FROM journal_entries WHERE id = ?", UUID.class, savedReversalId);
 
             assertThat(transferUser).isEqualTo(userId1);
+            assertThat(transferType).isEqualTo(EntryType.TRANSFER.name());
             assertThat(reversalUser).isEqualTo(userId2);
-            assertThat(reversesEntryId).isEqualTo(savedTransferId);
+            assertThat(reversalType).isEqualTo(savedTransferId);
+            assertThat(reversalEntry).isEqualTo(EntryType.REVERSAL.name());
         }
     }
 
@@ -106,12 +110,13 @@ class LedgerStoreTest {
     @DisplayName("Balance of")
     class BalanceOf {
         @Test
-        void returnsZeroForAccountWithoutLines() {
+        void returnsZeroWhenAccountHasNoLines() {
             UUID account1 = TestData.insertAccount(jdbcTemplate);
             UUID account2 = TestData.insertAccount(jdbcTemplate);
+            UUID account3 = TestData.insertAccount(jdbcTemplate);
             LedgerEntry ledgerEntry = createTransferEntry(account1, account2, "10");
             ledgerStore.saveEntry(ledgerEntry);
-            BigDecimal sum = ledgerStore.balanceOf(UUID.randomUUID());
+            BigDecimal sum = ledgerStore.balanceOf(account3);
             assertThat(sum).isEqualByComparingTo(new BigDecimal("0"));
         }
 

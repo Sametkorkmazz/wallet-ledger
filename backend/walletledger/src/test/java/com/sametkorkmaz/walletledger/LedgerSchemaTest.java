@@ -33,6 +33,11 @@ class LedgerSchemaTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @BeforeEach
+    void cleanTables() {
+        TestData.cleanTables(jdbcTemplate);
+    }
+
     private UUID insertAccount(String currency) {
         return jdbcTemplate.queryForObject("INSERT INTO accounts (currency) VALUES (?) RETURNING id", UUID.class,
                 currency);
@@ -53,23 +58,18 @@ class LedgerSchemaTest {
                 userId, key, "a".repeat(64));
     }
 
-    @BeforeEach
-    void cleanTables() {
-        TestData.cleanTables(jdbcTemplate);
-    }
-
     @Nested
-    @DisplayName("users")
-    class Users {
+    @DisplayName("Users table")
+    class UsersTable {
         @Test
-        void userWithDuplicateEmailIsRejected() {
+        void rejectsDuplicateEmail() {
             jdbcTemplate.update("INSERT INTO users (email, password_hash) VALUES (?, ?)", "test@example.com", "test123");
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO users (email, password_hash) VALUES (?, ?)", "test@example.com", "test456"))
                     .isInstanceOf(DataIntegrityViolationException.class);
         }
 
         @Test
-        void userWithSameEmailInDifferentCaseIsRejected() {
+        void rejectsSameEmailInDifferentCase() {
             jdbcTemplate.update("INSERT INTO users (email, password_hash) VALUES (?, ?)", "test@example.com", "test123");
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO users (email, password_hash) VALUES (?, ?)", "TEST@example.com", "test456"))
                     .isInstanceOf(DataIntegrityViolationException.class)
@@ -78,11 +78,10 @@ class LedgerSchemaTest {
     }
 
     @Nested
-    @DisplayName("accounts")
-    class Accounts {
-
+    @DisplayName("Accounts table")
+    class AccountsTable {
         @Test
-        void accountForNonExistentUserIsRejected() {
+        void rejectsAccountForNonExistentUser() {
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO accounts (user_id, currency) VALUES (?,'EUR')", UUID.randomUUID()))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("fk_accounts_users");
@@ -90,21 +89,21 @@ class LedgerSchemaTest {
 
         @ParameterizedTest
         @ValueSource(strings = {"EUR", "USD", "TRY"})
-        void validCurrencyAccepted(String currency) {
+        void acceptsValidCurrency(String currency) {
             assertDoesNotThrow(() -> jdbcTemplate.update("INSERT INTO accounts (currency) VALUES (?)", currency));
             int count = jdbcTemplate.queryForObject("SELECT count(*) FROM accounts", Integer.class);
             assertThat(count).isEqualTo(1);
         }
 
         @Test
-        void invalidCurrencyRejected() {
+        void rejectsInvalidCurrency() {
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO accounts (currency) VALUES ('XYZ')"))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("ck_accounts_currency");
         }
 
         @Test
-        void sameAccountInSameCurrencyIsRejected() {
+        void rejectsSameAccountInSameCurrency() {
             UUID userId = jdbcTemplate.queryForObject("INSERT INTO users (email, password_hash) VALUES (?, ?) RETURNING id",
                     UUID.class, "a@test.com", "hash");
             jdbcTemplate.update("INSERT INTO accounts (user_id, currency) VALUES (?,'EUR')", userId);
@@ -114,7 +113,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void secondExternalAccountInSameCurrencyIsRejected() {
+        void rejectsSecondExternalAccountInSameCurrency() {
             jdbcTemplate.update("INSERT INTO accounts (user_id, currency) VALUES (NULL,'EUR')");
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO accounts (user_id, currency) VALUES (NULL,'EUR')"))
                     .isInstanceOf(DataIntegrityViolationException.class)
@@ -123,16 +122,15 @@ class LedgerSchemaTest {
     }
 
     @Nested
-    @DisplayName("journal_lines")
-    class JournalLines {
-
+    @DisplayName("Journal lines table")
+    class JournalLinesTable {
         private void insertLedgerLine(UUID accountId, UUID entryId, int amount) {
             jdbcTemplate.update("INSERT INTO journal_lines (account_id, entry_id, amount) VALUES (?,?,?)",
                     accountId, entryId, amount);
         }
 
         @Test
-        void amountZeroRejected() {
+        void rejectsZeroAmount() {
             UUID accountId = insertAccount("EUR");
             UUID entryId = insertEntry("TEST");
             assertThatThrownBy(() -> insertLedgerLine(accountId, entryId, 0))
@@ -141,7 +139,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void amountColumnMatchesDomainLimits() {
+        void definesAmountColumnWithDomainLimits() {
             int columnScale = jdbcTemplate.queryForObject("""
                     SELECT numeric_scale FROM information_schema.columns
                     WHERE table_schema = 'public'
@@ -159,7 +157,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void ledgerLineForNonExistentAccountIsRejected() {
+        void rejectsLineForNonExistentAccount() {
             UUID entryId = insertEntry("TEST");
             assertThatThrownBy(() -> insertLedgerLine(UUID.randomUUID(), entryId, 10))
                     .isInstanceOf(DataIntegrityViolationException.class)
@@ -167,7 +165,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void ledgerLineForNonExistentEntryIsRejected() {
+        void rejectsLineForNonExistentEntry() {
             UUID accountId = insertAccount("EUR");
             assertThatThrownBy(() -> insertLedgerLine(accountId, UUID.randomUUID(), 10))
                     .isInstanceOf(DataIntegrityViolationException.class)
@@ -175,7 +173,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void sameAccountTwiceInOneEntryRejected() {
+        void rejectsSameAccountTwiceInOneEntry() {
             UUID accountId = insertAccount("EUR");
             UUID entryId = insertEntry("TEST");
             insertLedgerLine(accountId, entryId, 10);
@@ -185,7 +183,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void sameAccountInDifferentEntriesAllowed() {
+        void acceptsSameAccountInDifferentEntries() {
             UUID accountId = insertAccount("EUR");
             UUID entryId1 = insertEntry("TEST");
             UUID entryId2 = insertEntry("TEST");
@@ -197,10 +195,10 @@ class LedgerSchemaTest {
     }
 
     @Nested
-    @DisplayName("journal_entries")
-    class JournalEntries {
+    @DisplayName("Journal entries table")
+    class JournalEntriesTable {
         @Test
-        void descriptionNullRejected() {
+        void rejectsNullDescription() {
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description, entry_type) VALUES (NULL, 'TRANSFER')"))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("violates not-null constraint")
@@ -208,14 +206,14 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void descriptionOverMaxLengthRejected() {
+        void rejectsDescriptionOverMaxLength() {
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description, entry_type) VALUES (?, 'TRANSFER')", "A".repeat(MAX_DESCRIPTION_LENGTH + 1)))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("value too long for type character varying(255)");
         }
 
         @Test
-        void descriptionAtMaxLengthAccepted() {
+        void acceptsDescriptionAtMaxLength() {
             String savedDescription = assertDoesNotThrow(() -> jdbcTemplate.queryForObject("INSERT INTO journal_entries (description, entry_type) VALUES (?, 'TRANSFER') RETURNING description",
                     String.class, "A".repeat(MAX_DESCRIPTION_LENGTH)));
             assertThat(savedDescription).isEqualTo("A".repeat(MAX_DESCRIPTION_LENGTH));
@@ -223,20 +221,20 @@ class LedgerSchemaTest {
 
         @ParameterizedTest
         @EnumSource(value = EntryType.class, names = {"TRANSFER", "TOP_UP", "SYSTEM"})
-        void validEntryTypesAccepted(EntryType entryType) {
+        void acceptsValidEntryTypes(EntryType entryType) {
             UUID saved = insertEntry(entryType.name(), null);
             assertThat(saved).isNotNull();
         }
 
         @Test
-        void unknownEntryTypeRejected() {
+        void rejectsUnknownEntryType() {
             assertThatThrownBy(() -> insertEntry("INVALID", null))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("ck_journal_entries_entry_type");
         }
 
         @Test
-        void missingEntryTypeRejected() {
+        void rejectsMissingEntryType() {
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (description) VALUES ('TEST')"))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("violates not-null constraint")
@@ -244,14 +242,14 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void reversalWithoutLinkRejected() {
+        void rejectsReversalWithoutLink() {
             assertThatThrownBy(() -> insertEntry(EntryType.REVERSAL.name(), null))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("ck_journal_entries_reversal_link");
         }
 
         @Test
-        void linkWithoutReversalRejected() {
+        void rejectsLinkWithoutReversal() {
             UUID saved = insertEntry(EntryType.TRANSFER.name(), null);
             assertThatThrownBy(() -> insertEntry(EntryType.TRANSFER.name(), saved))
                     .isInstanceOf(DataIntegrityViolationException.class)
@@ -259,14 +257,14 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void reversalAccepted() {
+        void acceptsReversal() {
             UUID saved = insertEntry(EntryType.TRANSFER.name(), null);
             UUID reversesId = insertEntry(EntryType.REVERSAL.name(), saved);
             assertThat(reversesId).isNotNull();
         }
 
         @Test
-        void secondReversalOfSameEntryRejected() {
+        void rejectsSecondReversalOfSameEntry() {
             UUID saved = insertEntry(EntryType.TRANSFER.name(), null);
             insertEntry(EntryType.REVERSAL.name(), saved);
             assertThatThrownBy(() -> insertEntry(EntryType.REVERSAL.name(), saved))
@@ -275,7 +273,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void selfReversalRejected() {
+        void rejectsSelfReversal() {
             UUID id = UUID.randomUUID();
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO journal_entries (id, description, entry_type, reverses_entry_id) VALUES (?, 'TEST', 'REVERSAL', ?)", id, id))
                     .isInstanceOf(DataIntegrityViolationException.class)
@@ -284,10 +282,10 @@ class LedgerSchemaTest {
     }
 
     @Nested
-    @DisplayName("idempotency_test")
-    class IdempotencyKeys {
+    @DisplayName("Idempotency keys table")
+    class IdempotencyKeysTable {
         @Test
-        void keyRowWithoutResponseAccepted() {
+        void acceptsKeyRowWithoutResponse() {
             UUID userId = TestData.insertUser(jdbcTemplate);
             UUID key = UUID.randomUUID();
             insertKey(userId, key);
@@ -298,7 +296,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void duplicateKeyForSameUserRejected() {
+        void rejectsDuplicateKeyForSameUser() {
             UUID userId = TestData.insertUser(jdbcTemplate);
             UUID key = UUID.randomUUID();
             insertKey(userId, key);
@@ -311,7 +309,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void sameKeyForDifferentUsersAccepted() {
+        void acceptsSameKeyForDifferentUsers() {
             UUID userId1 = TestData.insertUser(jdbcTemplate);
             UUID userId2 = TestData.insertUser(jdbcTemplate);
             UUID key = UUID.randomUUID();
@@ -322,7 +320,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void missingRequestHashRejected() {
+        void rejectsMissingRequestHash() {
             UUID userId = TestData.insertUser(jdbcTemplate);
             UUID key = UUID.randomUUID();
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO idempotency_keys (user_id, idempotency_key) VALUES (?, ?)", userId, key))
@@ -334,7 +332,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void unknownUserRejected() {
+        void rejectsUnknownUser() {
             UUID key = UUID.randomUUID();
             UUID unknownUserId = UUID.randomUUID();
             assertThatThrownBy(() -> insertKey(unknownUserId, key))
@@ -345,7 +343,7 @@ class LedgerSchemaTest {
         }
 
         @Test
-        void unknownEntryRejected() {
+        void rejectsUnknownEntry() {
             UUID userId = TestData.insertUser(jdbcTemplate);
             UUID key = UUID.randomUUID();
             assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO idempotency_keys (user_id, idempotency_key, request_hash, entry_id) VALUES (?, ?, ?, ?)",
