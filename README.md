@@ -127,6 +127,8 @@ Decisions are recorded as architecture decision records in [`docs/adr`](docs/adr
 - [0002: Idempotent transfers](docs/adr/0002-idempotency.md) (proposed)
 - [0004: Money type and rounding](docs/adr/0004-money-type-and-rounding.md) (proposed)
 
+Coding, testing and Git conventions are in [`docs/conventions`](docs/conventions).
+
 ## Testing
 
 Database tests use Testcontainers, so they need Docker but no local database setup. The suite covers:
