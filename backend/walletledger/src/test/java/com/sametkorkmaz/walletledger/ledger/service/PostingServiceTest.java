@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -148,6 +149,27 @@ public class PostingServiceTest {
         }
 
         @Test
+        void rejectsEmptyLines() {
+            given(accountStore.findByIds(Collections.emptySet())).willReturn(Collections.emptyMap());
+            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, Collections.emptyList()))
+                    .isInstanceOf(InvalidPostingException.class)
+                    .hasMessageContaining("Entry must have at least 2 lines");
+            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+        }
+
+        @Test
+        void rejectsSingleLine() {
+            Account account1 = createAccount(Currency.EUR);
+            LineRequest lineRequest1 = createLineRequest(account1.id(), new BigDecimal("10.00"));
+            given(accountStore.findByIds(Set.of(lineRequest1.accountId())))
+                    .willReturn(Map.of(account1.id(), account1));
+            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1)))
+                    .isInstanceOf(InvalidPostingException.class)
+                    .hasMessageContaining("Entry must have at least 2 lines");
+            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+        }
+
+        @Test
         void throwsOverMaxAllowedDecimals() {
             Account account1 = createAccount(Currency.EUR);
             Account account2 = createAccount(Currency.EUR);
@@ -214,6 +236,20 @@ public class PostingServiceTest {
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("bug");
+        }
+
+        @Test
+        void rejectsReversalEntry() {
+            Account account1 = createAccount(Currency.EUR);
+            Account account2 = createAccount(Currency.EUR);
+            LineRequest lineRequest1 = createLineRequest(account1.id(), new BigDecimal("10"));
+            LineRequest lineRequest2 = createLineRequest(account2.id(), new BigDecimal("-10"));
+            given(accountStore.findByIds(anyCollection()))
+                    .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
+            assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.REVERSAL, List.of(lineRequest1, lineRequest2)))
+                    .isInstanceOf(InvalidPostingException.class)
+                    .hasMessageContaining("reversesEntryId is required for REVERSAL and not allowed for other types");
+            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
         }
     }
 }
