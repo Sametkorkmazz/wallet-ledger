@@ -55,11 +55,7 @@ class LedgerSchemaTest {
 
     @BeforeEach
     void cleanTables() {
-        jdbcTemplate.batchUpdate("DELETE FROM idempotency_keys;",
-                "DELETE FROM journal_lines;",
-                "DELETE FROM journal_entries;",
-                "DELETE FROM accounts;",
-                "DELETE FROM users;");
+        TestData.cleanTables(jdbcTemplate);
     }
 
     @Nested

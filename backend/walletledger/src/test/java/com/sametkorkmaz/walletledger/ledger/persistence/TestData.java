@@ -8,6 +8,10 @@ public final class TestData {
     private TestData() {
     }
 
+    public static void cleanTables(JdbcTemplate jdbcTemplate) {
+        jdbcTemplate.execute("TRUNCATE idempotency_keys, journal_lines, journal_entries, accounts, users");
+    }
+
     public static UUID insertUser(JdbcTemplate jdbcTemplate) {
         return jdbcTemplate.queryForObject("INSERT INTO users (email, password_hash) values (?,'test123') RETURNING ID",
                 UUID.class, UUID.randomUUID() + "@test.com");
