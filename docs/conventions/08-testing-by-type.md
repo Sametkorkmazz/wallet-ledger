@@ -61,6 +61,9 @@ class AccountsTable {
 - Group `@DisplayName` = method + path exactly: `"POST /transfers"`.
 - Test name: `returns<Status>When<Condition>`, e.g. `returns409WhenIdempotencyKeyWasUsedWithDifferentBody`.
 - Checks mapping, validation, status codes and security. Business rules are tested elsewhere.
+- Assert the error JSON (`application/problem+json`, `errorCode`) and that a 500 leaks no internals.
+- One test pins the JSON format: amounts are strings (`"10.50"`), dates are ISO-8601 UTC. A misspelt Jackson property is silently ignored; the test catches it.
+- Keep request bodies in `src/test/resources/requests/`; Postman examples reuse them.
 
 ## Architecture (ArchUnit)
 - Name `<Scope>ArchitectureTest`, in the root package it guards. No `@Nested`, no `@DisplayName`.

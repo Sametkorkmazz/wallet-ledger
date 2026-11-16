@@ -1,6 +1,6 @@
 # Testing
 
-Templates for each kind of test are in [testing-by-type.md](testing-by-type.md).
+Templates for each kind of test are in [testing-by-type.md](08-testing-by-type.md).
 
 ## What to test
 - **Your own business rules and queries**, both sides: one case that passes and one that fails, at the boundary (max length passes, one more fails).
@@ -9,6 +9,9 @@ Templates for each kind of test are in [testing-by-type.md](testing-by-type.md).
 - **Every database constraint** you wrote, asserting its name.
 - **Not:** the framework, plain getters, private methods (test them through the public one), or a rule the code under test can't break.
 - **Sabotage check** for every new rule or query: break it, see the test fail, restore it.
+- **A bug fix starts with a failing test** that reproduces the bug.
+- Every endpoint: the happy path and every documented error status.
+- Money logic gets **table-driven tests** (`@CsvSource`) covering every edge case the business cares about.
 
 ## Names
 | Item | Rule | Example |
@@ -29,12 +32,18 @@ Helpers are private, dumb (no branching, no asserts except `assertX`), one level
 - Money: `new BigDecimal("10.50")`, never a `double`; compare with `isEqualByComparingTo`. Assert scale only in the scale test.
 - Rejections: `assertThatThrownBy(...).isInstanceOf(...).hasMessageContaining(...)`. Always assert the message or constraint name.
 - `@ParameterizedTest` only when 4+ inputs share one assertion.
-- No test depends on another.
+- No test depends on another, and each one is **deterministic**: inject a fixed `Clock`, no `Thread.sleep`, no unseeded randomness.
+- Mock only I/O (stores, repositories, other features, clocks); use real domain objects, value objects and calculators.
 
 ## Order
 - **Members:** class annotations, constants, `@Autowired` / `@Mock` fields, `@BeforeEach` (only what every test needs), private helpers, `@Nested` groups.
 - **Groups:** same order as the methods of the class under test. Domain classes: valid construction, null arguments, validation rules, normalization, behaviour.
 - **Tests in a group:** empty or zero case, happy path, combinations, isolation (other rows ignored), rejections and edge cases.
+
+## Flaky tests and coverage
+- A flaky test is a bug: fix it or delete it within a week. `@Disabled` only with an issue number in the reason.
+- Coverage is a floor on domain and service packages, never a goal. A test without assertions is rejected in review.
+- Never copy production data into tests; synthetic data only.
 
 ## Before every commit
 - Names, `@DisplayName` and order follow the rules above.

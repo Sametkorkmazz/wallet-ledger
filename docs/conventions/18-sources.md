@@ -48,6 +48,49 @@ None of these rules are invented here. Each one comes from a widely used book, s
 | Sabotage check | Proves the test can fail; the manual version of mutation testing | PIT mutation testing (pitest.org) |
 | `@Nested` + `@DisplayName` | Test reports read like a specification | JUnit 5 User Guide |
 
+## Domain rules
+| Rule | Why | Source |
+|---|---|---|
+| Rule on the smallest owner; one rule, one home | A copied condition drifts and becomes a bug | Evans, *DDD*: aggregates, value objects, domain services |
+| Transitions in the enum, `switch` without `default` | A new status breaks the build instead of production | *Effective Java*: Item 34 (use enums instead of int constants) |
+| Strategies instead of long `switch` branches | A new variant is a new class, not an edit to old code | Gamma et al., *Design Patterns* (1994): Strategy |
+
+## API
+| Rule | Why | Source |
+|---|---|---|
+| One error shape with a stable code | Clients and support handle every error the same way | [RFC 9457: Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457) |
+| `Deprecation` and `Sunset` headers before removing `v1` | Clients learn about retirement from the response itself | [RFC 9745](https://www.rfc-editor.org/rfc/rfc9745), [RFC 8594](https://www.rfc-editor.org/rfc/rfc8594) |
+| `Idempotency-Key` on money-moving requests | A retried request never moves money twice | IETF draft *The Idempotency-Key HTTP Header Field*; Stripe API docs |
+| Committed OpenAPI file | Contract changes show up in review | [OpenAPI Specification](https://spec.openapis.org/oas/latest.html) |
+| Money as strings in JSON | JavaScript numbers are binary doubles | ADR 4; [MDN: Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number) |
+
+## Transactions and data
+| Rule | Why | Source |
+|---|---|---|
+| No remote calls inside a transaction; outbox for reliable side effects | Commit and message can't diverge | Chris Richardson, [Transactional outbox](https://microservices.io/patterns/data/transactional-outbox.html) |
+| Lock in a fixed order, re-read after locking | No deadlocks, no write skew | Kleppmann, *DDIA*: ch. 7 Transactions |
+| Paged lists, no N+1, projections for reads | Queries stay fast as tables grow | Vlad Mihalcea, *High-Performance Java Persistence* |
+| Expand → migrate → contract migrations | The old app version still runs, so rollback is a redeploy | Martin Fowler, [Parallel Change](https://martinfowler.com/bliki/ParallelChange.html) |
+
+## Configuration, logging and observability
+| Rule | Why | Source |
+|---|---|---|
+| Typed, validated configuration | A bad value fails at startup, not at 2 a.m. | Spring Boot reference: `@ConfigurationProperties` |
+| No personal data in logs, log once | Logs leak and get copied; duplicates hide the cause | [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html) |
+| Latency, traffic, errors, saturation on every dashboard | The four signals that show what users feel | Google, *Site Reliability Engineering* (2016): ch. 6 Monitoring Distributed Systems |
+| Low-cardinality metric labels | Every distinct label value is a new time series | [Prometheus: metric and label naming](https://prometheus.io/docs/practices/naming/) |
+| Percentiles, not averages | An average describes nobody | Gil Tene, *How NOT to Measure Latency* (talk) |
+
+## Release and documentation
+| Rule | Why | Source |
+|---|---|---|
+| SemVer derived from commits | The version number says what kind of change it is | [Semantic Versioning](https://semver.org/) |
+| Human-readable changelog | Users see what changed without reading commits | [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) |
+| Build once, deploy the same artifact everywhere | Production runs exactly what was tested | Humble & Farley, *Continuous Delivery* (2010) |
+| Diagrams at the level that answers the question | One diagram per question, not one diagram for everything | Simon Brown, [The C4 model](https://c4model.com/) |
+| Executable API collection in Git | Docs that run can't go stale silently | [Newman](https://github.com/postmanlabs/newman) |
+| Secret scanning in CI | A leaked key is found before it is exploited | [Gitleaks](https://github.com/gitleaks/gitleaks) |
+
 ## Docker
 | Rule | Why | Source |
 |---|---|---|

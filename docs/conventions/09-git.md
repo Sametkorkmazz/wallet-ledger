@@ -21,17 +21,43 @@ Format: `<type>: <subject>`. The squash merge adds ` (#N)`.
 | `ci` | Workflows | `ci: check frontend formatting (#47)` |
 | `chore` | Tooling, dependencies | `chore: add Prettier with Tailwind class sorting (#44)` |
 | `style` | Formatting or visual polish, no logic | `style: match dashboard header to the design (#57)` |
+| `perf` | Faster, same behaviour | `perf: index journal lines by account` |
+| `build` | Maven, dependencies, Dockerfile | `build: add JaCoCo coverage report` |
 
 - Lowercase, imperative ("add", not "added"), no full stop, about 70 characters at most.
 - No scopes (`feat(ledger):`) until the codebase needs them.
 - The squash commit's body lists the branch commits as bullets, in the same format. A one-commit PR has no body.
+- A breaking change gets `!` after the type (`feat!: rename amount to value`) and a `BREAKING CHANGE:` footer.
+- Checked automatically by a Git hook and in CI ([automation.md](15-automation.md)).
 
 ## Pull requests
+- **Small:** under ~400 changed lines (generated files excluded). A big feature becomes several PRs, unfinished parts behind a flag.
+- Open a **draft PR** early when you want feedback on the direction.
 - **The title is the future commit message.**
 - **The description follows the template:** *What* and *Testing* always; *Rules / decisions*, *Not covered yet* and *Notes* only when they apply. Delete empty sections.
 - Link the work item with `Closes #N`. The description must make sense on its own.
 - CI green before merging. Merge with **squash**.
 - A decision with trade-offs gets an ADR in `docs/adr`, linked from the PR.
+- Nobody merges their own PR without a review once the team has more than one person. New commits after approval need a new look.
+
+## Reviews
+- Answer a review request within one working day.
+- Start every comment with a label: `[blocking]`, `[suggestion]`, `[question]`, `[nit]`.
+- Reviewer checklist:
+  - [ ] Does what the issue asks, and nothing else
+  - [ ] Layer rules respected ([architecture.md](01-architecture.md)); each business rule has one home and a test
+  - [ ] Tests: happy path, errors, edge cases; a bug fix starts with a failing test
+  - [ ] No secrets, no personal data in logs
+  - [ ] New migration (never an edited one), backward compatible
+  - [ ] API change: OpenAPI diff reviewed, Postman updated, breaking change marked `!`
+  - [ ] Docs and diagrams updated if the behaviour or flow changed
+
+## Definition of Done
+- [ ] Acceptance criteria of the issue met
+- [ ] `./mvnw verify` and the frontend build green, locally and in CI
+- [ ] Tests, docs, OpenAPI and Postman updated
+- [ ] Unfinished work behind a flag that is off
+- [ ] Reviewed and squash-merged; branch deleted
 
 ## Typical workflow
 ```bash
