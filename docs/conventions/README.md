@@ -21,3 +21,4 @@ Short rules for how this project is built. Each rule is written once, in one of 
 | [testing.md](testing.md) | What to test, names, helpers, order, checklist |
 | [testing-by-type.md](testing-by-type.md) | Rules and templates per kind of test |
 | [docker.md](docker.md) | Local services, everyday commands, troubleshooting |
+| [sources.md](sources.md) | Why each rule exists, and the book or guide it comes from |
