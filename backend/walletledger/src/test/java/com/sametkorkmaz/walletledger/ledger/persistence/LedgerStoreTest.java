@@ -2,6 +2,7 @@ package com.sametkorkmaz.walletledger.ledger.persistence;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
+import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import com.sametkorkmaz.walletledger.ledger.domain.Money;
@@ -33,7 +34,7 @@ class LedgerStoreTest {
     private static LedgerEntry createTransferEntry(UUID increased, UUID decreased, String amount) {
         LedgerLine ledgerLine1 = new LedgerLine(increased, Money.of(Currency.EUR, amount));
         LedgerLine ledgerLine2 = new LedgerLine(decreased, Money.of(Currency.EUR, "-" + amount));
-        return new LedgerEntry("TEST", List.of(ledgerLine1, ledgerLine2));
+        return LedgerEntry.of("TEST", EntryType.TRANSFER, null, List.of(ledgerLine1, ledgerLine2));
     }
 
     @Nested
@@ -72,6 +73,32 @@ class LedgerStoreTest {
             assertThat(lines).isEqualTo(2);
             assertThat(amount1).isEqualByComparingTo("10");
             assertThat(amount2).isEqualByComparingTo("-10");
+        }
+
+        @Test
+        void savesEntryTypeLinkAndCreator() {
+            UUID userId1 = TestData.insertUser(jdbcTemplate);
+            UUID userId2 = TestData.insertUser(jdbcTemplate);
+            UUID account1 = TestData.insertAccount(jdbcTemplate, userId1);
+            UUID account2 = TestData.insertAccount(jdbcTemplate, userId2);
+
+            LedgerLine line1 = new LedgerLine(account1, Money.of(Currency.EUR, "10"));
+            LedgerLine line2 = new LedgerLine(account2, Money.of(Currency.EUR, "-10"));
+            LedgerEntry ledgerEntryTransfer = LedgerEntry.of("TEST", EntryType.TRANSFER, userId1, List.of(line1, line2));
+            UUID savedTransferId = ledgerStore.saveEntry(ledgerEntryTransfer);
+
+            LedgerLine lineReversal1 = new LedgerLine(account1, Money.of(Currency.EUR, "-10"));
+            LedgerLine lineReversal2 = new LedgerLine(account2, Money.of(Currency.EUR, "10"));
+            LedgerEntry ledgerEntryReversal = new LedgerEntry("TEST", EntryType.REVERSAL, savedTransferId, userId2, List.of(lineReversal1, lineReversal2));
+            UUID savedReversalId = ledgerStore.saveEntry(ledgerEntryReversal);
+
+            UUID transferUser = jdbcTemplate.queryForObject("SELECT created_by FROM journal_entries WHERE id = ?", UUID.class, savedTransferId);
+            UUID reversalUser = jdbcTemplate.queryForObject("SELECT created_by FROM journal_entries WHERE id = ?", UUID.class, savedReversalId);
+            UUID reversesEntryId = jdbcTemplate.queryForObject("SELECT reverses_entry_id FROM journal_entries WHERE id = ?", UUID.class, savedReversalId);
+
+            assertThat(transferUser).isEqualTo(userId1);
+            assertThat(reversalUser).isEqualTo(userId2);
+            assertThat(reversesEntryId).isEqualTo(savedTransferId);
         }
     }
 
