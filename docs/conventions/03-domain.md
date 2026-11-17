@@ -67,7 +67,7 @@ public static FundsApproval check(AccountId from, Money balance, Money amount) {
 
 public static LedgerEntry transfer(TransferCommand command, FundsApproval approval) {
     Objects.requireNonNull(approval, "the funds check must run first");
-    if (!approval.covers(command.from(), command.amount())) throw new IllegalArgumentException("approval for another account or amount");
+    if (!approval.covers(command.from(), command.amount())) throw new LedgerRuleException("approval for another account or amount");
     return new LedgerEntry(…);
 }
 ```

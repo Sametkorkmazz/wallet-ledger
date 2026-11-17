@@ -36,17 +36,12 @@ public class PostingService {
             throw new AccountNotFoundException(missingIds);
         }
         List<LedgerLine> lines = new ArrayList<>();
-        LedgerEntry entry;
-        try {
-            for (LineRequest lineRequest : lineRequests) {
-                LedgerLine line = new LedgerLine(lineRequest.accountId(),
-                        new Money(accounts.get(lineRequest.accountId()).currency(), lineRequest.amount()));
-                lines.add(line);
-            }
-            entry = LedgerEntry.of(description, entryType, null, lines);
-        } catch (IllegalArgumentException e) {
-            throw new InvalidPostingException(e.getMessage());
+        for (LineRequest lineRequest : lineRequests) {
+            LedgerLine line = new LedgerLine(lineRequest.accountId(),
+                    new Money(accounts.get(lineRequest.accountId()).currency(), lineRequest.amount()));
+            lines.add(line);
         }
+        LedgerEntry entry = LedgerEntry.of(description, entryType, null, lines);
         return ledgerStore.saveEntry(entry);
     }
 }

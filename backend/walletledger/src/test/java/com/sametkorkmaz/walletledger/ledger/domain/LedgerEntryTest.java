@@ -121,7 +121,7 @@ class LedgerEntryTest {
             lines.add(line(Currency.EUR, "-5"));
             lines.add(line(Currency.EUR, "5"));
             assertThatThrownBy(() -> entry(description, lines))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("description must not be blank");
         }
 
@@ -131,7 +131,7 @@ class LedgerEntryTest {
             lines.add(line(Currency.EUR, "-5"));
             lines.add(line(Currency.EUR, "5"));
             assertThatThrownBy(() -> entry("1".repeat(MAX_DESCRIPTION_LENGTH) + "2", lines))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("description must be at most %d characters".formatted(MAX_DESCRIPTION_LENGTH));
         }
     }
@@ -162,7 +162,7 @@ class LedgerEntryTest {
         void rejectsEmptyLines() {
             List<LedgerLine> lines = new ArrayList<>();
             assertThatThrownBy(() -> entry(lines))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry must have at least 2 lines");
         }
 
@@ -171,7 +171,7 @@ class LedgerEntryTest {
             List<LedgerLine> lines = new ArrayList<>();
             lines.add(line(Currency.EUR, "10"));
             assertThatThrownBy(() -> entry(lines))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry must have at least 2 lines");
         }
 
@@ -184,7 +184,7 @@ class LedgerEntryTest {
             lines.add(line(Currency.EUR, "10"));
 
             assertThatThrownBy(() -> entry(lines))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry must not contain duplicate accounts");
         }
     }
@@ -197,7 +197,7 @@ class LedgerEntryTest {
             LedgerLine line1 = line(Currency.USD, "-5");
             LedgerLine line2 = line(Currency.USD, "10");
             assertThatThrownBy(() -> entry(List.of(line1, line2)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry does not balance for " + Currency.USD + ": total = 5.00");
         }
 
@@ -206,7 +206,7 @@ class LedgerEntryTest {
             LedgerLine line1 = line(Currency.EUR, "10");
             LedgerLine line2 = line(Currency.USD, "-10");
             assertThatThrownBy(() -> entry(List.of(line1, line2)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry does not balance for EUR: total = 10.00");
         }
 
@@ -226,7 +226,7 @@ class LedgerEntryTest {
             LedgerLine line3 = line(Currency.EUR, "20");
             LedgerLine line4 = line(Currency.EUR, "-30");
             assertThatThrownBy(() -> entry(List.of(line1, line2, line3, line4)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry does not balance for EUR: total = -10.00");
         }
     }
@@ -253,7 +253,7 @@ class LedgerEntryTest {
         @Test
         void rejectsNullReversesEntryIdForReversal() {
             assertThatThrownBy(() -> entry(EntryType.REVERSAL, null))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessage("reversesEntryId is required for REVERSAL and not allowed for other types");
         }
 
@@ -261,7 +261,7 @@ class LedgerEntryTest {
         @EnumSource(value = EntryType.class, names = {"TRANSFER", "TOP_UP", "SYSTEM"})
         void rejectsReversesEntryIdForNonReversalTypes(EntryType entryType) {
             assertThatThrownBy(() -> entry(entryType, UUID.randomUUID()))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessage("reversesEntryId is required for REVERSAL and not allowed for other types");
         }
 

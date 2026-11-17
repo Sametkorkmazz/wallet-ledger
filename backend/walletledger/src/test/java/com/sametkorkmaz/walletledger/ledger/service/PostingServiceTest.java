@@ -6,6 +6,7 @@ import com.sametkorkmaz.walletledger.ledger.domain.Currency;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
+import com.sametkorkmaz.walletledger.ledger.domain.LedgerRuleException;
 import com.sametkorkmaz.walletledger.ledger.persistence.AccountStore;
 import com.sametkorkmaz.walletledger.ledger.persistence.LedgerStore;
 import org.junit.jupiter.api.DisplayName;
@@ -153,7 +154,7 @@ class PostingServiceTest {
         void rejectsEmptyLines() {
             given(accountStore.findByIds(Collections.emptySet())).willReturn(Collections.emptyMap());
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, Collections.emptyList()))
-                    .isInstanceOf(InvalidPostingException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry must have at least 2 lines");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
         }
@@ -165,7 +166,7 @@ class PostingServiceTest {
             given(accountStore.findByIds(Set.of(lineRequest1.accountId())))
                     .willReturn(Map.of(account1.id(), account1));
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1)))
-                    .isInstanceOf(InvalidPostingException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry must have at least 2 lines");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
         }
@@ -179,7 +180,7 @@ class PostingServiceTest {
             given(accountStore.findByIds(Set.of(account1.id(), account2.id())))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
-                    .isInstanceOf(InvalidPostingException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("EUR allows at most 2 decimal places");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
         }
@@ -193,7 +194,7 @@ class PostingServiceTest {
             given(accountStore.findByIds(Set.of(account1.id(), account2.id())))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
-                    .isInstanceOf(InvalidPostingException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry does not balance for");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
         }
@@ -206,7 +207,7 @@ class PostingServiceTest {
             given(accountStore.findByIds(Set.of(account1.id(), account2.id())))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, lines))
-                    .isInstanceOf(InvalidPostingException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry does not balance for");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
         }
@@ -218,13 +219,13 @@ class PostingServiceTest {
             given(accountStore.findByIds(Set.of(account1.id())))
                     .willReturn(Map.of(account1.id(), account1));
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, lines))
-                    .isInstanceOf(InvalidPostingException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry must not contain duplicate accounts");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
         }
 
         @Test
-        void throwsLedgerSaveExceptionUnwrapped() {
+        void throwsNonDomainExceptionUnwrapped() {
             Account account1 = createAccount(Currency.EUR);
             Account account2 = createAccount(Currency.EUR);
             List<LineRequest> lines = createLineRequests(account2, account1, "10");
@@ -244,7 +245,7 @@ class PostingServiceTest {
             given(accountStore.findByIds(anyCollection()))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.REVERSAL, lines))
-                    .isInstanceOf(InvalidPostingException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("reversesEntryId is required for REVERSAL and not allowed for other types");
             verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
         }

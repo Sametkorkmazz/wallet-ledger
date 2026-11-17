@@ -18,7 +18,7 @@ public record LedgerLine(UUID accountId, Money amount) {
         Objects.requireNonNull(accountId, "accountId must not be null");
         Objects.requireNonNull(amount, "amount must not be null");
         if (amount.isZero()) {
-            throw new IllegalArgumentException("amount must not be zero");
+            throw new LedgerRuleException("amount must not be zero");
         }
     }
 }

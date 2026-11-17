@@ -46,7 +46,7 @@ class LedgerLineTest {
         @ValueSource(strings = {"0", "-0.00", "0.00"})
         void rejectsZeroAmount(String amount) {
             assertThatThrownBy(() -> line(Currency.EUR, amount))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("amount must not be zero");
         }
 
