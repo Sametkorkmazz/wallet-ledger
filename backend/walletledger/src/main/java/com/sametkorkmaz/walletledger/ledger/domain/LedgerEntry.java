@@ -29,11 +29,11 @@ public record LedgerEntry(String description, EntryType entryType, UUID reverses
     public LedgerEntry {
         Objects.requireNonNull(description, "description must not be null");
         if (description.isBlank()) {
-            throw new IllegalArgumentException("description must not be blank");
+            throw new LedgerRuleException("description must not be blank");
         }
         String trimmedDesc = description.trim();
         if (trimmedDesc.length() > MAX_DESCRIPTION_LENGTH) {
-            throw new IllegalArgumentException("description must be at most %d characters".formatted(MAX_DESCRIPTION_LENGTH));
+            throw new LedgerRuleException("description must be at most %d characters".formatted(MAX_DESCRIPTION_LENGTH));
         }
         description = trimmedDesc;
 
@@ -41,7 +41,7 @@ public record LedgerEntry(String description, EntryType entryType, UUID reverses
         boolean isReversal = entryType == EntryType.REVERSAL;
         boolean hasLink = reversesEntryId != null;
         if (isReversal != hasLink) {
-            throw new IllegalArgumentException("reversesEntryId is required for REVERSAL and not allowed for other types");
+            throw new LedgerRuleException("reversesEntryId is required for REVERSAL and not allowed for other types");
         }
 
         Objects.requireNonNull(lines, "lines must not be null");
@@ -50,10 +50,10 @@ public record LedgerEntry(String description, EntryType entryType, UUID reverses
         }
         lines = List.copyOf(lines);
         if (lines.size() < 2) {
-            throw new IllegalArgumentException("Entry must have at least 2 lines");
+            throw new LedgerRuleException("Entry must have at least 2 lines");
         }
         if (lines.stream().map(LedgerLine::accountId).distinct().count() != lines.size()) {
-            throw new IllegalArgumentException("Entry must not contain duplicate accounts");
+            throw new LedgerRuleException("Entry must not contain duplicate accounts");
         }
         EnumMap<Currency, Money> totals = new EnumMap<>(Currency.class);
         for (LedgerLine line : lines) {
@@ -61,7 +61,7 @@ public record LedgerEntry(String description, EntryType entryType, UUID reverses
         }
         for (Map.Entry<Currency, Money> currencyTotal : totals.entrySet()) {
             if (!currencyTotal.getValue().isZero()) {
-                throw new IllegalArgumentException("Entry does not balance for " + currencyTotal.getKey() + ": total = " + currencyTotal.getValue().amount());
+                throw new LedgerRuleException("Entry does not balance for " + currencyTotal.getKey() + ": total = " + currencyTotal.getValue().amount());
             }
         }
     }

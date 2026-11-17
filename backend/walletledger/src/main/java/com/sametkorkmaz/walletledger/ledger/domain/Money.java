@@ -8,13 +8,13 @@ import java.util.Objects;
  * An amount of money in one currency.
  * <p>
  * The amount is normalized to the currency's minor units (2 for EUR, USD and TRY), so {@code 10.5} and {@code 10.50}
- * are equal. Amounts with more decimals than the currency allows are rejected, never rounded (ADR 4). Zero and
+ * are equal. Amounts with more decimals than the currency allows to are rejected, never rounded (ADR 4). Zero and
  * negative amounts are allowed: whether a zero line or a negative balance is valid is decided by the caller.
  * Arithmetic is only allowed between amounts of the same currency.
  *
  * @param currency the currency; its minor units set the scale
  * @param amount   signed amount; at most {@value #MAX_DIGITS} integer digits and at most the currency's minor units
- *                 as decimals (throws IllegalArgumentException otherwise)
+ *                 as decimals (throws {@code LedgerRuleException} otherwise)
  */
 public record Money(Currency currency, BigDecimal amount) {
     public static final int MAX_DIGITS = 15;
@@ -24,12 +24,12 @@ public record Money(Currency currency, BigDecimal amount) {
         Objects.requireNonNull(amount, "amount must not be null");
         long digits = (long) amount.precision() - amount.scale();
         if (digits > MAX_DIGITS) {
-            throw new IllegalArgumentException("amount must have at most %d integer digits (currently %d)".formatted(MAX_DIGITS, digits));
+            throw new LedgerRuleException("amount must have at most %d integer digits (currently %d)".formatted(MAX_DIGITS, digits));
         }
         try {
             amount = amount.setScale(currency.minorUnits(), RoundingMode.UNNECESSARY);
         } catch (ArithmeticException e) {
-            throw new IllegalArgumentException("%s allows at most %d decimal places".formatted(currency, currency.minorUnits()), e);
+            throw new LedgerRuleException("%s allows at most %d decimal places".formatted(currency, currency.minorUnits()), e);
         }
     }
 
@@ -41,7 +41,7 @@ public record Money(Currency currency, BigDecimal amount) {
     }
 
     /**
-     * Returns the sum. Throws IllegalArgumentException if the currencies differ or the result has too many digits.
+     * Returns the sum. Throws {@code LedgerRuleException} if the currencies differ or the result has too many digits.
      */
     public Money add(Money money) {
         checkSameCurrency(money);
@@ -50,7 +50,7 @@ public record Money(Currency currency, BigDecimal amount) {
     }
 
     /**
-     * Returns the difference. Throws IllegalArgumentException if the currencies differ or the result has too many digits.
+     * Returns the difference. Throws {@code LedgerRuleException}  if the currencies differ or the result has too many digits.
      */
     public Money subtract(Money money) {
         checkSameCurrency(money);
@@ -68,7 +68,7 @@ public record Money(Currency currency, BigDecimal amount) {
 
     private void checkSameCurrency(Money money) {
         if (currency != money.currency()) {
-            throw new IllegalArgumentException("cannot combine %s with %s".formatted(currency, money.currency()));
+            throw new LedgerRuleException("cannot combine %s with %s".formatted(currency, money.currency()));
         }
     }
 }
