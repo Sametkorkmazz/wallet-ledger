@@ -41,8 +41,9 @@ class MoneyTest {
         @Test
         void rejectsMoreDecimalsThanMinorUnits() {
             assertThatThrownBy(() -> Money.of(EUR, "10.005"))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("EUR allows at most 2 decimal");
+                    .isInstanceOf(LedgerRuleException.class)
+                    .hasMessageContaining("EUR allows at most 2 decimal")
+                    .hasCauseInstanceOf(ArithmeticException.class);
         }
 
         @Test
@@ -80,7 +81,7 @@ class MoneyTest {
         @Test
         void rejectsOverMaxDigits() {
             assertThatThrownBy(() -> Money.of(EUR, "1E+15"))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("amount must have at most 15 integer digits");
         }
 
@@ -88,7 +89,7 @@ class MoneyTest {
         @Test
         void rejectsExtremeNegativeScale() {
             assertThatThrownBy(() -> new Money(EUR, new BigDecimal(BigInteger.ONE, Integer.MIN_VALUE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("amount must have at most 15 integer digits");
         }
 
@@ -96,7 +97,7 @@ class MoneyTest {
         @Test
         void rejectsExtremePositiveScale() {
             assertThatThrownBy(() -> new Money(EUR, new BigDecimal(BigInteger.ONE, Integer.MAX_VALUE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("EUR allows at most 2 decimal places");
         }
     }
@@ -133,7 +134,7 @@ class MoneyTest {
             Money money1 = Money.of(EUR, "10.50");
             Money money2 = Money.of(USD, "2.25");
             assertThatThrownBy(() -> money1.add(money2))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("cannot combine EUR with USD");
         }
 
@@ -142,7 +143,7 @@ class MoneyTest {
             Money money1 = Money.of(EUR, "10.50");
             Money money2 = Money.of(USD, "2.25");
             assertThatThrownBy(() -> money1.subtract(money2))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("cannot combine EUR with USD");
         }
 
@@ -151,7 +152,7 @@ class MoneyTest {
             Money money1 = Money.of(EUR, "9E+14");
             Money money2 = Money.of(EUR, "2E+14");
             assertThatThrownBy(() -> money1.add(money2))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("amount must have at most 15 integer digits");
         }
 
