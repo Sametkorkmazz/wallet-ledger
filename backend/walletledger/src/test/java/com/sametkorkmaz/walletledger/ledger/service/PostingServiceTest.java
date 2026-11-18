@@ -2,11 +2,14 @@ package com.sametkorkmaz.walletledger.ledger.service;
 
 
 import com.sametkorkmaz.walletledger.ledger.domain.Account;
+import com.sametkorkmaz.walletledger.ledger.domain.AccountId;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
+import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerRuleException;
+import com.sametkorkmaz.walletledger.ledger.domain.UserId;
 import com.sametkorkmaz.walletledger.ledger.persistence.AccountStore;
 import com.sametkorkmaz.walletledger.ledger.persistence.LedgerStore;
 import org.junit.jupiter.api.DisplayName;
@@ -45,7 +48,7 @@ class PostingServiceTest {
     @InjectMocks
     private PostingService postingService;
 
-    private static LineRequest createLineRequest(UUID accountId, BigDecimal amount) {
+    private static LineRequest createLineRequest(AccountId accountId, BigDecimal amount) {
         return new LineRequest(accountId, amount);
     }
 
@@ -56,7 +59,7 @@ class PostingServiceTest {
     }
 
     private static Account createAccount(Currency currency) {
-        return new Account(UUID.randomUUID(), UUID.randomUUID(), currency);
+        return new Account(AccountId.of(UUID.randomUUID()), UserId.of(UUID.randomUUID()), currency);
     }
 
     @Nested
@@ -72,6 +75,7 @@ class PostingServiceTest {
                     createLineRequests(account3, account4, "30").stream()).toList();
             given(accountStore.findByIds(Set.of(account1.id(), account2.id(), account3.id(), account4.id())))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2, account3.id(), account3, account4.id(), account4));
+            given(ledgerStore.saveEntry(any(LedgerEntry.class))).willReturn(EntryId.of(UUID.randomUUID()));
             postingService.postLedger("TEST", EntryType.TRANSFER, lines);
             ArgumentCaptor<LedgerEntry> ledgerEntryArgumentCaptor = ArgumentCaptor.forClass(LedgerEntry.class);
             verify(ledgerStore).saveEntry(ledgerEntryArgumentCaptor.capture());
@@ -88,6 +92,7 @@ class PostingServiceTest {
             List<LineRequest> lines = createLineRequests(account2, account1, "10");
             given(accountStore.findByIds(Set.of(account1.id(), account2.id())))
                     .willReturn(Map.of(account1.id(), account1, account2.id(), account2));
+            given(ledgerStore.saveEntry(any(LedgerEntry.class))).willReturn(EntryId.of(UUID.randomUUID()));
             postingService.postLedger("TEST", EntryType.TOP_UP, lines);
             ArgumentCaptor<LedgerEntry> ledgerEntryArgumentCaptor = ArgumentCaptor.forClass(LedgerEntry.class);
             verify(ledgerStore).saveEntry(ledgerEntryArgumentCaptor.capture());
@@ -102,7 +107,7 @@ class PostingServiceTest {
             List<LineRequest> lines = createLineRequests(account2, account1, "10");
             given(accountStore.findByIds(anyCollection())).willReturn(Map.of(account1.id(), account1, account2.id(), account2));
             UUID savedEntryId = UUID.randomUUID();
-            given(ledgerStore.saveEntry(any(LedgerEntry.class))).willReturn(savedEntryId);
+            given(ledgerStore.saveEntry(any(LedgerEntry.class))).willReturn(EntryId.of(savedEntryId));
             UUID response = postingService.postLedger("TEST", EntryType.TRANSFER, lines);
             assertThat(response).isEqualTo(savedEntryId);
         }

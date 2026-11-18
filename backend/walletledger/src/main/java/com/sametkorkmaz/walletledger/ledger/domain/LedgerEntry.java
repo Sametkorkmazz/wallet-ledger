@@ -4,7 +4,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * A balanced set of ledger lines that will be posted together.
@@ -21,7 +20,7 @@ import java.util.UUID;
  * @param createdBy       the user who started the entry; null for system entries
  * @param lines           at least two lines; amounts must sum to zero per currency
  */
-public record LedgerEntry(String description, EntryType entryType, UUID reversesEntryId, UUID createdBy,
+public record LedgerEntry(String description, EntryType entryType, EntryId reversesEntryId, UserId createdBy,
                           List<LedgerLine> lines) {
 
     public static final int MAX_DESCRIPTION_LENGTH = 255;
@@ -66,7 +65,7 @@ public record LedgerEntry(String description, EntryType entryType, UUID reverses
         }
     }
 
-    public static LedgerEntry of(String description, EntryType entryType, UUID createdBy, List<LedgerLine> lines) {
+    public static LedgerEntry of(String description, EntryType entryType, UserId createdBy, List<LedgerLine> lines) {
         return new LedgerEntry(description, entryType, null, createdBy, lines);
     }
 }

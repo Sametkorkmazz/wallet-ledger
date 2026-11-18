@@ -1,6 +1,7 @@
 package com.sametkorkmaz.walletledger.ledger.service;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
+import com.sametkorkmaz.walletledger.ledger.domain.AccountId;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.persistence.LedgerStore;
 import com.sametkorkmaz.walletledger.ledger.persistence.TestData;
@@ -32,7 +33,7 @@ public class PostingServiceIntegrationTest {
     LedgerStore ledgerStore;
 
     private static LineRequest createLineRequest(UUID accountId, BigDecimal amount) {
-        return new LineRequest(accountId, amount);
+        return new LineRequest(AccountId.of(accountId), amount);
     }
 
     @BeforeEach

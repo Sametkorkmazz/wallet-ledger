@@ -1,6 +1,7 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
+import com.sametkorkmaz.walletledger.ledger.domain.AccountId;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
@@ -44,8 +45,8 @@ class LedgerStoreIntegrationTest {
         void savesEntryAndAllLinesTogether() {
             UUID account1 = TestData.insertAccount(jdbcTemplate);
             UUID account2 = TestData.insertAccount(jdbcTemplate);
-            LedgerLine ledgerLine1 = new LedgerLine(account1, Money.of(Currency.EUR, "10.0"));
-            LedgerLine ledgerLine2 = new LedgerLine(account2, Money.of(Currency.EUR, "-10.0"));
+            LedgerLine ledgerLine1 = new LedgerLine(AccountId.of(account1), Money.of(Currency.EUR, "10.0"));
+            LedgerLine ledgerLine2 = new LedgerLine(AccountId.of(account2), Money.of(Currency.EUR, "-10.0"));
             LedgerEntry ledgerEntry = LedgerEntry.of("TEST", EntryType.TRANSFER, null, List.of(ledgerLine1, ledgerLine2));
             ledgerStore.saveEntry(ledgerEntry);
             int entries = jdbcTemplate.queryForObject("SELECT count(*) FROM journal_entries", Integer.class);
@@ -57,8 +58,8 @@ class LedgerStoreIntegrationTest {
         @Test
         void rollsBackEntryAndLinesWhenALineFails() {
             UUID account1 = TestData.insertAccount(jdbcTemplate);
-            LedgerLine ledgerLine1 = new LedgerLine(account1, Money.of(Currency.EUR, "10.0"));
-            LedgerLine ledgerLine2 = new LedgerLine(UUID.randomUUID(), Money.of(Currency.EUR, "-10.0"));
+            LedgerLine ledgerLine1 = new LedgerLine(AccountId.of(account1), Money.of(Currency.EUR, "10.0"));
+            LedgerLine ledgerLine2 = new LedgerLine(AccountId.of(UUID.randomUUID()), Money.of(Currency.EUR, "-10.0"));
             LedgerEntry ledgerEntry = LedgerEntry.of("TEST", EntryType.TRANSFER, null, List.of(ledgerLine1, ledgerLine2));
             assertThatThrownBy(() -> ledgerStore.saveEntry(ledgerEntry))
                     .isInstanceOf(DataIntegrityViolationException.class)

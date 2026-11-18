@@ -2,6 +2,7 @@ package com.sametkorkmaz.walletledger.ledger.persistence;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
 import com.sametkorkmaz.walletledger.ledger.domain.Account;
+import com.sametkorkmaz.walletledger.ledger.domain.AccountId;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -48,7 +49,7 @@ class AccountStoreTest {
             saveAccount(userId, Currency.EUR);
             saveAccount(userId, Currency.USD);
             testEntityManager.clear();
-            Map<UUID, Account> found = accountStore.findByIds(List.of());
+            Map<AccountId, Account> found = accountStore.findByIds(List.of());
             assertThat(found).isEmpty();
         }
 
@@ -58,17 +59,18 @@ class AccountStoreTest {
             AccountEntity accountEntity1 = saveAccount(userId, Currency.EUR);
             AccountEntity accountEntity2 = saveAccount(userId, Currency.USD);
             testEntityManager.clear();
-            Map<UUID, Account> found = accountStore.findByIds(List.of(accountEntity1.getId(), accountEntity2.getId()));
-            assertThat(found).containsOnlyKeys(accountEntity1.getId(), accountEntity2.getId());
-            Account account1 = found.get(accountEntity1.getId());
-            assertThat(account1.id()).isEqualTo(accountEntity1.getId());
-            assertThat(account1.currency()).isEqualTo(Currency.EUR);
-            assertThat(account1.userId()).isEqualTo(userId);
 
-            Account account2 = found.get(accountEntity2.getId());
-            assertThat(account2.id()).isEqualTo(accountEntity2.getId());
+            Map<AccountId, Account> found = accountStore.findByIds(List.of(AccountId.of(accountEntity1.getId()), AccountId.of(accountEntity2.getId())));
+            assertThat(found).containsOnlyKeys(AccountId.of(accountEntity1.getId()), AccountId.of(accountEntity2.getId()));
+            Account account1 = found.get(AccountId.of(accountEntity1.getId()));
+            assertThat(account1.id().value()).isEqualTo(accountEntity1.getId());
+            assertThat(account1.currency()).isEqualTo(Currency.EUR);
+            assertThat(account1.userId().value()).isEqualTo(userId);
+
+            Account account2 = found.get(AccountId.of(accountEntity2.getId()));
+            assertThat(account2.id().value()).isEqualTo(accountEntity2.getId());
             assertThat(account2.currency()).isEqualTo(Currency.USD);
-            assertThat(account2.userId()).isEqualTo(userId);
+            assertThat(account2.userId().value()).isEqualTo(userId);
         }
 
         @Test
@@ -77,8 +79,8 @@ class AccountStoreTest {
             AccountEntity accountEntity1 = saveAccount(userId, Currency.EUR);
             saveAccount(userId, Currency.USD);
             testEntityManager.clear();
-            Map<UUID, Account> found = accountStore.findByIds(List.of(accountEntity1.getId()));
-            assertThat(found).containsOnlyKeys(accountEntity1.getId());
+            Map<AccountId, Account> found = accountStore.findByIds(List.of(AccountId.of(accountEntity1.getId())));
+            assertThat(found).containsOnlyKeys(AccountId.of(accountEntity1.getId()));
         }
 
         @Test
@@ -87,8 +89,8 @@ class AccountStoreTest {
             AccountEntity accountEntity = saveAccount(userId, Currency.EUR);
             saveAccount(userId, Currency.USD);
             testEntityManager.clear();
-            Map<UUID, Account> found = accountStore.findByIds(List.of(accountEntity.getId(), UUID.randomUUID()));
-            assertThat(found).containsOnlyKeys(accountEntity.getId());
+            Map<AccountId, Account> found = accountStore.findByIds(List.of(AccountId.of(accountEntity.getId()), AccountId.of(UUID.randomUUID())));
+            assertThat(found).containsOnlyKeys(AccountId.of(accountEntity.getId()));
         }
 
         @Test
@@ -97,7 +99,7 @@ class AccountStoreTest {
             saveAccount(userId, Currency.EUR);
             saveAccount(userId, Currency.USD);
             testEntityManager.clear();
-            Map<UUID, Account> found = accountStore.findByIds(List.of(UUID.randomUUID()));
+            Map<AccountId, Account> found = accountStore.findByIds(List.of(AccountId.of(UUID.randomUUID())));
             assertThat(found).isEmpty();
         }
 
@@ -105,9 +107,9 @@ class AccountStoreTest {
         void returnsExternalAccountWithNullUserId() {
             AccountEntity accountEntity = saveAccount(null, Currency.EUR);
             testEntityManager.clear();
-            Map<UUID, Account> found = accountStore.findByIds(List.of(accountEntity.getId()));
-            assertThat(found).containsOnlyKeys(accountEntity.getId());
-            assertThat(found.get(accountEntity.getId()).userId()).isNull();
+            Map<AccountId, Account> found = accountStore.findByIds(List.of(AccountId.of(accountEntity.getId())));
+            assertThat(found).containsOnlyKeys(AccountId.of(accountEntity.getId()));
+            assertThat(found.get(AccountId.of(accountEntity.getId())).userId()).isNull();
         }
     }
 }

@@ -1,7 +1,6 @@
 package com.sametkorkmaz.walletledger.ledger.domain;
 
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * One posting to a single account within a ledger entry.
@@ -13,7 +12,7 @@ import java.util.UUID;
  * @param accountId the account this line posts to
  * @param amount    signed, non-zero amount; its currency is the account's currency (scale and digits are checked by Money)
  */
-public record LedgerLine(UUID accountId, Money amount) {
+public record LedgerLine(AccountId accountId, Money amount) {
     public LedgerLine {
         Objects.requireNonNull(accountId, "accountId must not be null");
         Objects.requireNonNull(amount, "amount must not be null");

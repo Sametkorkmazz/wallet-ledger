@@ -1,7 +1,5 @@
 package com.sametkorkmaz.walletledger.ledger.domain;
 
-import java.util.UUID;
-
-public record Account(UUID id, UUID userId, Currency currency) {
+public record Account(AccountId id, UserId userId, Currency currency) {
 
 }

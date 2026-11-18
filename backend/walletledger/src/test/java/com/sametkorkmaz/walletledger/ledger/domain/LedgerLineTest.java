@@ -14,11 +14,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class LedgerLineTest {
     private LedgerLine line(Currency c, String amount) {
-        return new LedgerLine(UUID.randomUUID(), Money.of(c, amount));
+        return new LedgerLine(AccountId.of(UUID.randomUUID()), Money.of(c, amount));
     }
 
     private LedgerLine line(UUID accountId, Currency c, String amount) {
-        return new LedgerLine(accountId, Money.of(c, amount));
+        return new LedgerLine(AccountId.of(accountId), Money.of(c, amount));
     }
 
     @Nested
@@ -37,7 +37,7 @@ class LedgerLineTest {
     class Amount {
         @Test
         void rejectsNullAmount() {
-            assertThatThrownBy(() -> new LedgerLine(UUID.randomUUID(), null))
+            assertThatThrownBy(() -> new LedgerLine(AccountId.of(UUID.randomUUID()), null))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessageContaining("amount must not be null");
         }
