@@ -3,7 +3,6 @@ package com.sametkorkmaz.walletledger.ledger.persistence;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
-import com.sametkorkmaz.walletledger.ledger.domain.UserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,23 +23,15 @@ public class LedgerStore {
      */
     @Transactional
     public EntryId saveEntry(LedgerEntry ledgerEntry) {
-        JournalEntryEntity journalEntryEntity = new JournalEntryEntity(ledgerEntry.description(), ledgerEntry.entryType(),
-                valueOrNull(ledgerEntry.reversesEntryId()), valueOrNull(ledgerEntry.createdBy()));
+        JournalEntryEntity journalEntryEntity = new JournalEntryEntity(ledgerEntry);
         journalEntryEntity = journalEntryRepository.saveAndFlush(journalEntryEntity);
         List<JournalLineEntity> lines = new ArrayList<>();
+        EntryId savedId = EntryId.of(journalEntryEntity.getId());
         for (LedgerLine line : ledgerEntry.lines()) {
-            lines.add(new JournalLineEntity(line.accountId().value(), journalEntryEntity.getId(), line.amount().amount()));
+            lines.add(new JournalLineEntity(savedId, line));
         }
         journalLineRepository.saveAllAndFlush(lines);
-        return EntryId.of(journalEntryEntity.getId());
-    }
-
-    private UUID valueOrNull(EntryId entryId) {
-        return entryId == null ? null : entryId.value();
-    }
-
-    private UUID valueOrNull(UserId userId) {
-        return userId == null ? null : userId.value();
+        return savedId;
     }
 
     public BigDecimal balanceOf(UUID accountId) {

@@ -1,12 +1,20 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
+import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
-import jakarta.persistence.*;
+import com.sametkorkmaz.walletledger.ledger.domain.UserId;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Getter;
 
 import java.time.Instant;
-import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -36,13 +44,19 @@ class JournalEntryEntity {
     protected JournalEntryEntity() {
     }
 
-    JournalEntryEntity(String description, EntryType entryType, UUID reversesEntryId, UUID createdBy) {
-        Objects.requireNonNull(description, "description must not be null");
-        Objects.requireNonNull(entryType, "entryType must not be null");
-        this.description = description;
-        this.entryType = entryType;
-        this.reversesEntryId = reversesEntryId;
-        this.createdBy = createdBy;
+    JournalEntryEntity(LedgerEntry ledgerEntry) {
+        this.description = ledgerEntry.description();
+        this.entryType = ledgerEntry.entryType();
+        this.reversesEntryId = valueOrNull(ledgerEntry.reversesEntryId());
+        this.createdBy = valueOrNull(ledgerEntry.createdBy());
         this.createdAt = Instant.now();
+    }
+
+    private static UUID valueOrNull(UserId userId) {
+        return userId == null ? null : userId.value();
+    }
+
+    private static UUID valueOrNull(EntryId entryId) {
+        return entryId == null ? null : entryId.value();
     }
 }

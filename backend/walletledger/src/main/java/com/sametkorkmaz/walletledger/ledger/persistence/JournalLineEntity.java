@@ -1,11 +1,17 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
-import jakarta.persistence.*;
+import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
+import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -32,16 +38,9 @@ class JournalLineEntity {
     protected JournalLineEntity() {
     }
 
-    JournalLineEntity(UUID accountId, UUID entryId, BigDecimal amount) {
-        Objects.requireNonNull(accountId, "accountId must not be null");
-        Objects.requireNonNull(entryId, "entryId must not be null");
-        Objects.requireNonNull(amount, "amount must not be null");
-        this.accountId = accountId;
-        this.entryId = entryId;
-        try {
-            this.amount = amount.setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
-        } catch (ArithmeticException e) {
-            throw new IllegalArgumentException("amount must have at most %d decimal places".formatted(AMOUNT_SCALE), e);
-        }
+    JournalLineEntity(EntryId entryId, LedgerLine ledgerLine) {
+        this.accountId = ledgerLine.accountId().value();
+        this.entryId = entryId.value();
+        this.amount = ledgerLine.amount().amount().setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
     }
 }

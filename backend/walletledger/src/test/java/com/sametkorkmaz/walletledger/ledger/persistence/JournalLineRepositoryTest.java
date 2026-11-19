@@ -1,6 +1,8 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
+import com.sametkorkmaz.walletledger.ledger.domain.AccountId;
+import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -32,7 +34,7 @@ class JournalLineRepositoryTest {
 
 
     private JournalLineEntity saveLine(UUID accountId, UUID entryId, String amount) {
-        return journalLineRepository.saveAndFlush(new JournalLineEntity(accountId, entryId, new BigDecimal(amount)));
+        return journalLineRepository.saveAndFlush(LedgerLineData.create(EntryId.of(entryId), AccountId.of(accountId), amount));
     }
 
     @Nested
@@ -42,12 +44,12 @@ class JournalLineRepositoryTest {
         void savesJournalLine() {
             UUID accountId = TestData.insertAccount(jdbcTemplate);
             UUID entryId = TestData.insertEntry(jdbcTemplate);
-            UUID savedId = saveLine(accountId, entryId, "-12.3456").getId();
+            UUID savedId = saveLine(accountId, entryId, "-12.34").getId();
             testEntityManager.clear();
             JournalLineEntity found = journalLineRepository.findById(savedId).orElseThrow();
             assertThat(found.getAccountId()).isEqualTo(accountId);
             assertThat(found.getEntryId()).isEqualTo(entryId);
-            assertThat(found.getAmount()).isEqualTo(new BigDecimal("-12.3456"));
+            assertThat(found.getAmount()).isEqualByComparingTo(new BigDecimal("-12.34"));
             assertThat(found.getAmount().scale()).isEqualTo(MAX_SCALE);
         }
     }
@@ -61,8 +63,8 @@ class JournalLineRepositoryTest {
             UUID account2 = TestData.insertAccount(jdbcTemplate);
             UUID entryId1 = TestData.insertEntry(jdbcTemplate);
             UUID entryId2 = TestData.insertEntry(jdbcTemplate);
-            saveLine(account1, entryId1, "-12.3456");
-            saveLine(account2, entryId1, "5.302");
+            saveLine(account1, entryId1, "-12.34");
+            saveLine(account2, entryId1, "5.30");
             saveLine(account2, entryId2, "100.20");
             testEntityManager.clear();
             List<JournalLineEntity> found = journalLineRepository.findByEntryId(entryId1);
@@ -74,7 +76,7 @@ class JournalLineRepositoryTest {
         void returnsEmptyListForUnknownEntry() {
             UUID account1 = TestData.insertAccount(jdbcTemplate);
             UUID entryId1 = TestData.insertEntry(jdbcTemplate);
-            saveLine(account1, entryId1, "-12.3456");
+            saveLine(account1, entryId1, "-12.34");
             testEntityManager.clear();
             List<JournalLineEntity> found = journalLineRepository.findByEntryId(UUID.randomUUID());
             assertThat(found).isEmpty();
