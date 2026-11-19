@@ -1,6 +1,7 @@
 package com.sametkorkmaz.walletledger.ledger.service;
 
 import com.sametkorkmaz.walletledger.ledger.domain.Account;
+import com.sametkorkmaz.walletledger.ledger.domain.AccountId;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
@@ -28,9 +29,9 @@ public class PostingService {
 
     @Transactional
     public UUID postLedger(String description, EntryType entryType, List<LineRequest> lineRequests) {
-        Set<UUID> accountIds = lineRequests.stream().map(LineRequest::accountId).collect(Collectors.toSet());
-        Map<UUID, Account> accounts = accountStore.findByIds(accountIds);
-        Set<UUID> missingIds = new HashSet<>(accountIds);
+        Set<AccountId> accountIds = lineRequests.stream().map(LineRequest::accountId).collect(Collectors.toSet());
+        Map<AccountId, Account> accounts = accountStore.findByIds(accountIds);
+        Set<AccountId> missingIds = new HashSet<>(accountIds);
         missingIds.removeAll(accounts.keySet());
         if (!missingIds.isEmpty()) {
             throw new AccountNotFoundException(missingIds);
@@ -42,6 +43,6 @@ public class PostingService {
             lines.add(line);
         }
         LedgerEntry entry = LedgerEntry.of(description, entryType, null, lines);
-        return ledgerStore.saveEntry(entry);
+        return ledgerStore.saveEntry(entry).value();
     }
 }

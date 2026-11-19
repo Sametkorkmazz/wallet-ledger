@@ -22,13 +22,14 @@ class LedgerEntryTest {
     private static final int MAX_DESCRIPTION_LENGTH = 255;
 
     private LedgerLine line(Currency c, String amount) {
-        return new LedgerLine(UUID.randomUUID(), Money.of(c, amount));
+        return new LedgerLine(AccountId.of(UUID.randomUUID()), Money.of(c, amount));
     }
 
     private LedgerEntry entry(EntryType entryType, UUID reversesEntryId) {
         LedgerLine line1 = line(Currency.EUR, "10");
         LedgerLine line2 = line(Currency.EUR, "-10");
-        return new LedgerEntry("TEST", entryType, reversesEntryId, null, List.of(line1, line2));
+        return new LedgerEntry("TEST", entryType, reversesEntryId == null ? null : EntryId.of(reversesEntryId),
+                null, List.of(line1, line2));
     }
 
     private LedgerEntry entry(List<LedgerLine> lines) {
@@ -179,8 +180,8 @@ class LedgerEntryTest {
         void rejectsDuplicateAccountInLines() {
             UUID id = UUID.randomUUID();
             List<LedgerLine> lines = new ArrayList<>();
-            lines.add(new LedgerLine(id, Money.of(Currency.EUR, "-5")));
-            lines.add(new LedgerLine(id, Money.of(Currency.EUR, "-5")));
+            lines.add(new LedgerLine(AccountId.of(id), Money.of(Currency.EUR, "-5")));
+            lines.add(new LedgerLine(AccountId.of(id), Money.of(Currency.EUR, "-5")));
             lines.add(line(Currency.EUR, "10"));
 
             assertThatThrownBy(() -> entry(lines))
@@ -247,7 +248,7 @@ class LedgerEntryTest {
             UUID reversesEntryId = UUID.randomUUID();
             LedgerEntry ledgerEntry = entry(EntryType.REVERSAL, reversesEntryId);
             assertThat(ledgerEntry.entryType()).isEqualTo(EntryType.REVERSAL);
-            assertThat(ledgerEntry.reversesEntryId()).isEqualTo(reversesEntryId);
+            assertThat(ledgerEntry.reversesEntryId()).isEqualTo(EntryId.of(reversesEntryId));
         }
 
         @Test

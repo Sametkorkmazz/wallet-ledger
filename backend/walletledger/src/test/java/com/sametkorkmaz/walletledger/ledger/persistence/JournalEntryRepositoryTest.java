@@ -1,7 +1,9 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
+import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
+import com.sametkorkmaz.walletledger.ledger.domain.UserId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -30,16 +32,12 @@ class JournalEntryRepositoryTest {
     @Autowired
     JdbcTemplate jdbcTemplate;
 
-    private static JournalEntryEntity createEntry(String description) {
-        return new JournalEntryEntity(description, EntryType.TRANSFER, null, null);
-    }
-
     @Nested
     @DisplayName("Saving and reading")
     class SavingAndReading {
         @Test
         void savesJournalEntry() {
-            JournalEntryEntity saved = journalEntryRepository.saveAndFlush(createEntry("TEST"));
+            JournalEntryEntity saved = journalEntryRepository.saveAndFlush(LedgerEntryData.createEntry("TEST", EntryType.TRANSFER, null, null));
             testEntityManager.clear();
             JournalEntryEntity found = journalEntryRepository.findById(saved.getId()).orElseThrow();
             assertThat(found.getDescription()).isEqualTo("TEST");
@@ -52,9 +50,9 @@ class JournalEntryRepositoryTest {
         @Test
         void savesReversalWithLinkAndCreator() {
             UUID userId = TestData.insertUser(jdbcTemplate);
-            JournalEntryEntity original = journalEntryRepository.saveAndFlush(createEntry("TEST"));
+            JournalEntryEntity original = journalEntryRepository.saveAndFlush(LedgerEntryData.createEntry("TEST", EntryType.TRANSFER, null, null));
             JournalEntryEntity reversal = journalEntryRepository.saveAndFlush(
-                    new JournalEntryEntity("REVERSAL", EntryType.REVERSAL, original.getId(), userId));
+                    LedgerEntryData.createEntry("REVERSAL", EntryType.REVERSAL, EntryId.of(original.getId()), UserId.of(userId)));
             testEntityManager.clear();
             JournalEntryEntity found = journalEntryRepository.findById(reversal.getId()).orElseThrow();
             assertThat(found.getEntryType()).isEqualTo(EntryType.REVERSAL);

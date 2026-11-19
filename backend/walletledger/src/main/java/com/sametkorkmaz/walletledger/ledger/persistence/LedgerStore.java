@@ -1,5 +1,6 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
+import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import lombok.RequiredArgsConstructor;
@@ -21,16 +22,16 @@ public class LedgerStore {
      * Currency is not stored: the caller built the lines from loaded accounts
      */
     @Transactional
-    public UUID saveEntry(LedgerEntry ledgerEntry) {
-        JournalEntryEntity journalEntryEntity = new JournalEntryEntity(ledgerEntry.description(), ledgerEntry.entryType(),
-                ledgerEntry.reversesEntryId(), ledgerEntry.createdBy());
+    public EntryId saveEntry(LedgerEntry ledgerEntry) {
+        JournalEntryEntity journalEntryEntity = new JournalEntryEntity(ledgerEntry);
         journalEntryEntity = journalEntryRepository.saveAndFlush(journalEntryEntity);
         List<JournalLineEntity> lines = new ArrayList<>();
+        EntryId savedId = EntryId.of(journalEntryEntity.getId());
         for (LedgerLine line : ledgerEntry.lines()) {
-            lines.add(new JournalLineEntity(line.accountId(), journalEntryEntity.getId(), line.amount().amount()));
+            lines.add(new JournalLineEntity(savedId, line));
         }
         journalLineRepository.saveAllAndFlush(lines);
-        return journalEntryEntity.getId();
+        return savedId;
     }
 
     public BigDecimal balanceOf(UUID accountId) {
