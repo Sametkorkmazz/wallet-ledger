@@ -3,6 +3,7 @@ package com.sametkorkmaz.walletledger.ledger.service;
 
 import com.sametkorkmaz.walletledger.ledger.domain.Account;
 import com.sametkorkmaz.walletledger.ledger.domain.AccountId;
+import com.sametkorkmaz.walletledger.ledger.domain.AccountNotFoundException;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryType;

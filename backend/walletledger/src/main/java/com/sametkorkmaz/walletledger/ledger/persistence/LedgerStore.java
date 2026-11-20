@@ -1,16 +1,16 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
+import com.sametkorkmaz.walletledger.ledger.domain.Account;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
+import com.sametkorkmaz.walletledger.ledger.domain.Money;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -34,7 +34,7 @@ public class LedgerStore {
         return savedId;
     }
 
-    public BigDecimal balanceOf(UUID accountId) {
-        return journalLineRepository.sumAmountByAccountId(accountId);
+    public Money balanceOf(Account account) {
+        return new Money(account.currency(), journalLineRepository.sumAmountByAccountId(account.id().value()));
     }
 }
