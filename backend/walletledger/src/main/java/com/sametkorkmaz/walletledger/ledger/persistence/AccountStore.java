@@ -2,6 +2,7 @@ package com.sametkorkmaz.walletledger.ledger.persistence;
 
 import com.sametkorkmaz.walletledger.ledger.domain.Account;
 import com.sametkorkmaz.walletledger.ledger.domain.AccountId;
+import com.sametkorkmaz.walletledger.ledger.domain.AccountNotFoundException;
 import com.sametkorkmaz.walletledger.ledger.domain.UserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,11 @@ public class AccountStore {
         return accountRepository.findAllById(ids.stream().map(AccountId::value).toList())
                 .stream().collect(Collectors.toMap(account -> AccountId.of(account.getId()),
                         this::toAccount));
+    }
+
+    public Account getByIdOrThrow(AccountId accountId) {
+        AccountEntity accountEntity = accountRepository.findById(accountId.value()).orElseThrow(() -> new AccountNotFoundException(accountId));
+        return toAccount(accountEntity);
     }
 
     private Account toAccount(AccountEntity accountEntity) {

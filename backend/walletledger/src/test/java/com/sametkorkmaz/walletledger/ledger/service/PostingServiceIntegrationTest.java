@@ -1,8 +1,12 @@
 package com.sametkorkmaz.walletledger.ledger.service;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
+import com.sametkorkmaz.walletledger.ledger.domain.Account;
 import com.sametkorkmaz.walletledger.ledger.domain.AccountId;
+import com.sametkorkmaz.walletledger.ledger.domain.AccountNotFoundException;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
+import com.sametkorkmaz.walletledger.ledger.domain.Money;
+import com.sametkorkmaz.walletledger.ledger.persistence.AccountStore;
 import com.sametkorkmaz.walletledger.ledger.persistence.LedgerStore;
 import com.sametkorkmaz.walletledger.ledger.persistence.TestData;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +20,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +34,8 @@ public class PostingServiceIntegrationTest {
     JdbcTemplate jdbcTemplate;
     @Autowired
     PostingService postingService;
+    @Autowired
+    AccountStore accountStore;
     @Autowired
     LedgerStore ledgerStore;
 
@@ -48,16 +55,17 @@ public class PostingServiceIntegrationTest {
         void savesEntryAndAllLinesTogether() {
             UUID account1 = TestData.insertAccount(jdbcTemplate);
             UUID account2 = TestData.insertAccount(jdbcTemplate);
+            Map<AccountId, Account> accounts = accountStore.findByIds(List.of(AccountId.of(account1), AccountId.of(account2)));
             LineRequest lineRequest1 = createLineRequest(account1, new BigDecimal("100"));
             LineRequest lineRequest2 = createLineRequest(account2, new BigDecimal("-100"));
             UUID saved = postingService.postLedger("TEST", EntryType.TOP_UP, List.of(lineRequest1, lineRequest2));
             String entryType = jdbcTemplate.queryForObject(
                     "SELECT entry_type FROM journal_entries WHERE id = ?", String.class, saved);
             assertThat(entryType).isEqualTo("TOP_UP");
-            BigDecimal line1Balance = ledgerStore.balanceOf(account1);
-            BigDecimal line2Balance = ledgerStore.balanceOf(account2);
-            assertThat(line1Balance).isEqualByComparingTo(new BigDecimal("100"));
-            assertThat(line2Balance).isEqualByComparingTo(new BigDecimal("-100"));
+            Money line1Balance = ledgerStore.balanceOf(accounts.get(AccountId.of(account1)));
+            Money line2Balance = ledgerStore.balanceOf(accounts.get(AccountId.of(account2)));
+            assertThat(line1Balance).isEqualTo(Money.of(accounts.get(AccountId.of(account1)).currency(), "100"));
+            assertThat(line2Balance).isEqualTo(Money.of(accounts.get(AccountId.of(account2)).currency(), "-100"));
         }
 
         @Test

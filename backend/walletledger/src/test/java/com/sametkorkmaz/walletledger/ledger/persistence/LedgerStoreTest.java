@@ -1,6 +1,7 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
+import com.sametkorkmaz.walletledger.ledger.domain.Account;
 import com.sametkorkmaz.walletledger.ledger.domain.AccountId;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
@@ -35,9 +36,21 @@ class LedgerStoreTest {
     JdbcTemplate jdbcTemplate;
 
     private static LedgerEntry createTransferEntry(UUID increased, UUID decreased, String amount) {
-        LedgerLine ledgerLine1 = new LedgerLine(AccountId.of(increased), Money.of(Currency.EUR, amount));
-        LedgerLine ledgerLine2 = new LedgerLine(AccountId.of(decreased), Money.of(Currency.EUR, "-" + amount));
+        return createTransferEntry(increased, decreased, amount, Currency.EUR);
+    }
+
+    private static LedgerEntry createTransferEntry(UUID increased, UUID decreased, String amount, Currency currency) {
+        LedgerLine ledgerLine1 = new LedgerLine(AccountId.of(increased), Money.of(currency, amount));
+        LedgerLine ledgerLine2 = new LedgerLine(AccountId.of(decreased), Money.of(currency, "-" + amount));
         return LedgerEntry.of("TEST", EntryType.TRANSFER, null, List.of(ledgerLine1, ledgerLine2));
+    }
+
+    private static Account accountOf(UUID accountId) {
+        return accountOf(accountId, Currency.EUR);
+    }
+
+    private static Account accountOf(UUID accountId, Currency currency) {
+        return new Account(AccountId.of(accountId), null, currency);
     }
 
     @Nested
@@ -119,8 +132,8 @@ class LedgerStoreTest {
             UUID account3 = TestData.insertAccount(jdbcTemplate);
             LedgerEntry ledgerEntry = createTransferEntry(account1, account2, "10");
             ledgerStore.saveEntry(ledgerEntry);
-            BigDecimal sum = ledgerStore.balanceOf(account3);
-            assertThat(sum).isEqualByComparingTo(new BigDecimal("0"));
+            Money sum = ledgerStore.balanceOf(accountOf(account3));
+            assertThat(sum).isEqualTo(Money.of(Currency.EUR, "0.00"));
         }
 
         @Test
@@ -129,8 +142,8 @@ class LedgerStoreTest {
             UUID account2 = TestData.insertAccount(jdbcTemplate);
             LedgerEntry ledgerEntry = createTransferEntry(account1, account2, "10");
             ledgerStore.saveEntry(ledgerEntry);
-            BigDecimal sum = ledgerStore.balanceOf(account1);
-            assertThat(sum).isEqualByComparingTo(new BigDecimal("10"));
+            Money sum = ledgerStore.balanceOf(accountOf(account1));
+            assertThat(sum).isEqualTo(Money.of(Currency.EUR, "10.00"));
         }
 
         @Test
@@ -141,8 +154,20 @@ class LedgerStoreTest {
             LedgerEntry ledgerEntry2 = createTransferEntry(account2, account1, "30");
             ledgerStore.saveEntry(ledgerEntry1);
             ledgerStore.saveEntry(ledgerEntry2);
-            BigDecimal sum = ledgerStore.balanceOf(account1);
-            assertThat(sum).isEqualByComparingTo(new BigDecimal("-20"));
+            Money sum = ledgerStore.balanceOf(accountOf(account1));
+            assertThat(sum).isEqualTo(Money.of(Currency.EUR, "-20.00"));
+        }
+
+        @Test
+        void usesCurrencyOfGivenAccount() {
+            UUID account1 = TestData.insertAccount(jdbcTemplate);
+            UUID account2 = TestData.insertAccount(jdbcTemplate);
+            LedgerEntry ledgerEntry1 = createTransferEntry(account1, account2, "10", Currency.USD);
+            LedgerEntry ledgerEntry2 = createTransferEntry(account2, account1, "30", Currency.USD);
+            ledgerStore.saveEntry(ledgerEntry1);
+            ledgerStore.saveEntry(ledgerEntry2);
+            Money sum = ledgerStore.balanceOf(accountOf(account1, Currency.USD));
+            assertThat(sum).isEqualTo(Money.of(Currency.USD, "-20.00"));
         }
     }
 }

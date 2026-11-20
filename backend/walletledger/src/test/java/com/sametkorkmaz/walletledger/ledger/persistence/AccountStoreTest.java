@@ -3,6 +3,7 @@ package com.sametkorkmaz.walletledger.ledger.persistence;
 import com.sametkorkmaz.walletledger.TestcontainersConfiguration;
 import com.sametkorkmaz.walletledger.ledger.domain.Account;
 import com.sametkorkmaz.walletledger.ledger.domain.AccountId;
+import com.sametkorkmaz.walletledger.ledger.domain.AccountNotFoundException;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({TestcontainersConfiguration.class, AccountStore.class})
@@ -110,6 +112,30 @@ class AccountStoreTest {
             Map<AccountId, Account> found = accountStore.findByIds(List.of(AccountId.of(accountEntity.getId())));
             assertThat(found).containsOnlyKeys(AccountId.of(accountEntity.getId()));
             assertThat(found.get(AccountId.of(accountEntity.getId())).userId()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("Get by id or throw")
+    class GetByIdOrThrow {
+        @Test
+        void getsKnownAccount() {
+            AccountEntity accountEntity = saveAccount(null, Currency.EUR);
+            testEntityManager.clear();
+            Account account = accountStore.getByIdOrThrow(AccountId.of(accountEntity.getId()));
+            assertThat(account.id()).isEqualTo(AccountId.of(accountEntity.getId()));
+            assertThat(account.userId()).isNull();
+            assertThat(account.currency()).isEqualTo(Currency.EUR);
+        }
+
+        @Test
+        void throwsUnknownAccount() {
+            saveAccount(null, Currency.EUR);
+            testEntityManager.clear();
+            UUID unknownId = UUID.randomUUID();
+            assertThatThrownBy(() -> accountStore.getByIdOrThrow(AccountId.of(unknownId)))
+                    .isInstanceOf(AccountNotFoundException.class)
+                    .hasMessageContaining("Account not found with id: " + unknownId);
         }
     }
 }

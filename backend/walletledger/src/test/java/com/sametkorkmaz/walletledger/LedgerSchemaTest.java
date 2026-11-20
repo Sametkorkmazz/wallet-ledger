@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -136,6 +137,17 @@ class LedgerSchemaTest {
             assertThatThrownBy(() -> insertLedgerLine(accountId, entryId, 0))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("ck_journal_lines_amount_not_zero");
+        }
+
+        @Test
+        void storesFourDecimalPlaces() {
+            UUID accountId = insertAccount("EUR");
+            UUID entryId = insertEntry("TEST");
+            UUID lineId = jdbcTemplate.queryForObject("INSERT INTO journal_lines (account_id, entry_id, amount) VALUES (?,?,?) RETURNING id",
+                    UUID.class, accountId, entryId, new BigDecimal("10.0001"));
+            BigDecimal amount = jdbcTemplate.queryForObject("SELECT amount from journal_lines where id = ?",
+                    BigDecimal.class, lineId);
+            assertThat(amount).isEqualTo(new BigDecimal("10.0001"));
         }
 
         @Test
