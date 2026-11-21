@@ -1,5 +1,6 @@
 import BalanceCard from "@/components/dashboard/BalanceCard";
 import BalanceCardSkeleton from "@/components/dashboard/BalanceCardSkeleton";
+import RecentActivity from "@/components/dashboard/RecentActivity";
 import PageHeader from "@/components/layout/PageHeader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -91,6 +92,7 @@ export default function DashboardPage() {
           ))}
         </ul>
       )}
+      <RecentActivity />
     </div>
   );
 }

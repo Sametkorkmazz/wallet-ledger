@@ -7,6 +7,10 @@ const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
   timeStyle: "short",
 });
 
+const dateFormatterShort = new Intl.DateTimeFormat(LOCALE, {
+  dateStyle: "medium",
+});
+
 const moneyFormats = Object.fromEntries(
   CURRENCIES.map((currency) => [currency, makeFormat(currency)]),
 ) as Record<Currency, Intl.NumberFormat>;
@@ -25,4 +29,8 @@ export function formatMoney(amount: string, currency: Currency) {
 
 export function formatDate(date: number) {
   return dateFormatter.format(date);
+}
+
+export function formatDateShort(date: number) {
+  return dateFormatterShort.format(date);
 }
