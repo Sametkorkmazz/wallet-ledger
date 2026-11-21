@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import useBalances from "@/hooks/useBalances";
+import { formatDate } from "@/lib/money";
 import { CircleAlert, Inbox, RefreshCw, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -14,10 +15,8 @@ const gridClass =
 export default function DashboardPage() {
   const { data, isPending, isError, refetch, dataUpdatedAt, isFetching } =
     useBalances();
-  const lastUpdated = new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(dataUpdatedAt);
+
+  const lastUpdated = dataUpdatedAt > 0 ? formatDate(dataUpdatedAt) : undefined;
   return (
     <div className="flex flex-col gap-4">
       <header className="flex items-start justify-between">
@@ -49,7 +48,7 @@ export default function DashboardPage() {
             ))}
           </ul>
         </>
-      ) : isError ? (
+      ) : isError && data === undefined ? (
         <Alert variant="destructive">
           <CircleAlert />
           <AlertTitle>Couldn't load your balances</AlertTitle>

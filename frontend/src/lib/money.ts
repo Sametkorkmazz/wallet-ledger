@@ -1,9 +1,28 @@
-import type { Currency } from "@/api/types";
+import { CURRENCIES, type Currency } from "@/api/types";
 
-export function formatMoney(amount: string, currency: Currency) {
-  return new Intl.NumberFormat("en-US", {
+const LOCALE = "en-US";
+
+const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+const moneyFormats = Object.fromEntries(
+  CURRENCIES.map((currency) => [currency, makeFormat(currency)]),
+) as Record<Currency, Intl.NumberFormat>;
+
+function makeFormat(currency: Currency) {
+  return new Intl.NumberFormat(LOCALE, {
     style: "currency",
     currency,
     currencyDisplay: "narrowSymbol",
-  }).format(amount as Intl.StringNumericLiteral);
+  });
+}
+
+export function formatMoney(amount: string, currency: Currency) {
+  return moneyFormats[currency].format(amount as Intl.StringNumericLiteral);
+}
+
+export function formatDate(date: number) {
+  return dateFormatter.format(date);
 }

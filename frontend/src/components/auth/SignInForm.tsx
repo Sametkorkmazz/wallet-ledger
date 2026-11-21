@@ -4,7 +4,8 @@ import { Label } from "@/components/ui/label";
 import { signInSchema, type SignInValues } from "@/schemas/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+
 export default function SignInForm() {
   const {
     register,
@@ -13,10 +14,11 @@ export default function SignInForm() {
   } = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
   });
+  const location = useLocation();
   const navigate = useNavigate();
   function onSubmit() {
     // TODO: call api.signIn
-    navigate("/dashboard");
+    navigate(location.state?.from?.pathname ?? "/dashboard", { replace: true });
   }
   return (
     <form
@@ -50,7 +52,7 @@ export default function SignInForm() {
           <p className="text-sm text-danger">{errors.password?.message}</p>
         )}
       </div>
-      <Button type="submit" size={"lg"}>
+      <Button type="submit" size="lg">
         Sign in
       </Button>
     </form>
