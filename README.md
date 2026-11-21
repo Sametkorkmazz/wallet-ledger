@@ -17,23 +17,25 @@ that tackles the problems real payment systems face.
 
 ## Tech stack
 
-| Area     | Technology                                                                                |
-|----------|-------------------------------------------------------------------------------------------|
-| Backend  | Java 21, Spring Boot 3.5, Maven                                                           |
-| Database | PostgreSQL 16, Flyway migrations                                                          |
-| Tests    | JUnit 5, AssertJ, Mockito, Testcontainers, ArchUnit                                       |
-| Frontend | React, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, React Hook Form, Zod                 |
-| CI       | GitHub Actions: backend tests, frontend lint and build; Dependabot for dependency updates |
-| Planned  | TanStack Query, Kafka, Redis, Docker (full stack), AWS (Terraform)                        |
+| Area     | Technology                                                                                              |
+|----------|---------------------------------------------------------------------------------------------------------|
+| Backend  | Java 21, Spring Boot 3.5, Maven                                                                         |
+| Database | PostgreSQL 16, Flyway migrations                                                                        |
+| Tests    | JUnit 5, AssertJ, Mockito, Testcontainers, ArchUnit                                                     |
+| Frontend | React, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, TanStack Query, React Router, React Hook Form, Zod |
+| CI       | GitHub Actions: backend tests, frontend lint and build; Dependabot for dependency updates               |
+| Planned  | Kafka, Redis, Docker (full stack), AWS (Terraform)                                                      |
 
 ## Repository layout
 
 ```
 .
 ├── backend/walletledger/    Spring Boot application
-│   └── src/main/resources/db/migration/   Flyway migrations (V1 users, V2 ledger, V3 one line per account per entry)
+│   └── src/main/resources/db/migration/   Flyway migrations (V1 users, V2 ledger, V3 one line per account per entry,
+        V4 unique email and V5 entry types and idempotency_keys)
 ├── frontend/                React + TypeScript single-page app (Vite)
 ├── docs/adr/                Architecture decision records
+├── docs/conventions/        Coding, testing and Git conventions
 ├── .github/                 CI workflow, Dependabot, pull request template
 ├── docker-compose.yml       Local PostgreSQL
 └── .env.example             Database settings for Docker Compose
@@ -72,6 +74,8 @@ The ledger follows double-entry bookkeeping. The main rules:
 
 - **Entries and lines.** A journal entry has at least two lines. Each line posts a signed `NUMERIC(19,4)` amount to one
   account.
+- **Entry types.** Each entry has a type (`TRANSFER`, `TOP_UP`, `REVERSAL`, `SYSTEM`) and an optional creator.
+A `REVERSAL` points to the entry it reverses, and an entry can be reversed at most once.
 - **Signed amounts.** A positive amount increases the account's balance and a negative amount decreases it. An entry is
   balanced when its lines sum to zero (per currency).
 - **Balances are derived.** An account's balance is the sum of its lines. Any stored balance is only a cache.
@@ -81,21 +85,24 @@ The ledger follows double-entry bookkeeping. The main rules:
   per currency.
 - **One line per account per entry.** An account appears at most once in an entry (checked in the domain model and by
   a unique constraint).
-- **Amount limits.** At most 4 decimal places and 15 integer digits, matching `NUMERIC(19,4)`. Too many decimals are
-  rejected, never rounded silently.
+- **Amount limits.** Domain: at most the currency's minor units as decimals (2 for EUR, USD and TRY) and 15 integer
+  digits. The column is `NUMERIC(19,4)` (ADR 4). Too many decimals are rejected, never rounded silently.
 - **Rules in the database:** primary and foreign keys, the allowed currency list, non-zero amounts, and the
   uniqueness rules. The rule that an entry's lines sum to zero spans several rows, so it is enforced when a
   `LedgerEntry` is created; the posting service saves entries in one transaction.
 
 ```mermaid
-
 erDiagram
-    USERS |o--o{ ACCOUNTS: has
-    ACCOUNTS ||--o{ JOURNAL_LINES: "posts to"
-    JOURNAL_ENTRIES ||--o{ JOURNAL_LINES: contains
+    USERS |o--o{ ACCOUNTS : has
+    ACCOUNTS ||--o{ JOURNAL_LINES : "posts to"
+    JOURNAL_ENTRIES ||--o{ JOURNAL_LINES : contains
+    JOURNAL_ENTRIES |o--o| JOURNAL_ENTRIES : reverses
+    USERS |o--o{ JOURNAL_ENTRIES : creates
+    USERS ||--o{ IDEMPOTENCY_KEYS : owns
+    JOURNAL_ENTRIES |o--o{ IDEMPOTENCY_KEYS : "is the result of"
     USERS {
         uuid id PK
-        string email UK
+        string email UK "case-insensitive unique"
         string password_hash
         datetime created_at
     }
@@ -108,6 +115,9 @@ erDiagram
     JOURNAL_ENTRIES {
         uuid id PK
         string description
+        string entry_type "TRANSFER, TOP_UP, REVERSAL, SYSTEM"
+        uuid reverses_entry_id FK
+        uuid created_by FK
         datetime created_at
     }
     JOURNAL_LINES {
@@ -116,7 +126,16 @@ erDiagram
         uuid entry_id FK
         numeric amount "NUMERIC(19,4) signed"
     }
-    
+    IDEMPOTENCY_KEYS {
+        uuid user_id PK, FK
+        string idempotency_key PK
+        string request_hash
+        uuid entry_id FK "NULL until commit"
+        int response_status
+        string response_body
+        datetime created_at
+    }
+
 ```
 
 ## Design decisions
@@ -125,6 +144,7 @@ Decisions are recorded as architecture decision records in [`docs/adr`](docs/adr
 
 - [0001: Double-entry ledger](docs/adr/0001-double-entry-ledger.md)
 - [0002: Idempotent transfers](docs/adr/0002-idempotency.md) (proposed)
+- 0003: locking strategy (reserved)
 - [0004: Money type and rounding](docs/adr/0004-money-type-and-rounding.md) (proposed)
 
 Coding, testing and Git conventions are in [`docs/conventions`](docs/conventions).
