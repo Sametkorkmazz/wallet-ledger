@@ -19,3 +19,25 @@ export const CURRENCY_NAME: Record<Currency, string> = {
   USD: "Dollar",
   TRY: "Lira",
 };
+
+export type TransactionType = "TRANSFER_IN" | "TRANSFER_OUT";
+export type TransactionStatus = "COMPLETED" | "PENDING" | "FAILED";
+
+export type Transaction = {
+  id: string;
+  reference: string;
+  type: TransactionType;
+  status: TransactionStatus;
+  currency: Currency;
+  amount: string;
+  counterparty: string;
+  createdAt: string;
+};
+
+export type PageResponse<T> = {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
