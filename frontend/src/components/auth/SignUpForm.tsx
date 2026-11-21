@@ -50,11 +50,7 @@ export default function SignUpForm() {
           id="su-password"
           {...register("password")}
         />
-        {!errors.password && (
-          <span className="text-sm text-muted-foreground">
-            10-72 characters
-          </span>
-        )}
+        {!errors.password && <span className="caption">10-72 characters</span>}
         {errors.password && (
           <p className="text-sm text-danger">{errors.password.message}</p>
         )}

@@ -69,10 +69,8 @@ export default function AuthPage() {
             </TabsList>
             <TabsContent value="signin" className="flex flex-col gap-4 pt-4">
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  Welcome back
-                </h2>
-                <p className="text-sm text-muted-foreground">
+                <h2 className="page-title">Welcome back</h2>
+                <p className="caption">
                   Sign in to see your balances and send money.
                 </p>
               </div>
@@ -80,10 +78,8 @@ export default function AuthPage() {
             </TabsContent>
             <TabsContent value="signup" className="flex flex-col gap-4 pt-4">
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  Create your account
-                </h2>
-                <p className="text-sm text-muted-foreground">
+                <h2 className="page-title">Create your account</h2>
+                <p className="caption">
                   Start with fake money in EUR, USD and TRY.
                 </p>
               </div>
@@ -91,7 +87,7 @@ export default function AuthPage() {
             </TabsContent>
           </Tabs>
 
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-3 caption">
             <Separator className="flex-1" />
             OR
             <Separator className="flex-1" />

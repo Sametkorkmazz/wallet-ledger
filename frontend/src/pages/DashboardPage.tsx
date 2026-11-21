@@ -1,9 +1,15 @@
 import BalanceCard from "@/components/dashboard/BalanceCard";
 import BalanceCardSkeleton from "@/components/dashboard/BalanceCardSkeleton";
+import PageHeader from "@/components/layout/PageHeader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import useBalances from "@/hooks/useBalances";
 import { formatDate } from "@/lib/money";
 import { CircleAlert, Inbox, RefreshCw, Send } from "lucide-react";
@@ -19,24 +25,19 @@ export default function DashboardPage() {
   const lastUpdated = dataUpdatedAt > 0 ? formatDate(dataUpdatedAt) : undefined;
   return (
     <div className="flex flex-col gap-4">
-      <header className="flex items-start justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          {dataUpdatedAt > 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Balances as of {lastUpdated}
-            </p>
-          ) : (
-            isPending && <Skeleton className="h-5 w-48" />
-          )}
-        </div>
-        <Button asChild>
-          <Link to="/transfer">
-            <Send />
-            Send money
-          </Link>
-        </Button>
-      </header>
+      <PageHeader
+        title="Dashboard"
+        description={lastUpdated && `Balances as of ${lastUpdated}`}
+        loading={isPending}
+        action={
+          <Button asChild>
+            <Link to="/transfer">
+              <Send />
+              Send money
+            </Link>
+          </Button>
+        }
+      />
       {isPending ? (
         <>
           <span className="sr-only">Loading balances</span>
@@ -70,22 +71,17 @@ export default function DashboardPage() {
           </AlertDescription>
         </Alert>
       ) : data.length === 0 ? (
-        <Card
-          aria-labelledby="empty-title"
-          className="mx-auto w-full max-w-md items-center py-10 text-center"
-        >
-          <span className="flex size-12 items-center justify-center rounded-full bg-primary/12 text-primary">
-            <Inbox className="size-6" />
-          </span>
-          <CardContent className="flex flex-col gap-1.5">
-            <h2 id="empty-title" className="font-semibold">
-              No money here yet
-            </h2>
-            <p className="text-sm text-muted-foreground">
+        <Empty aria-labelledby="empty-title">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Inbox className="size-6" />
+            </EmptyMedia>
+            <EmptyTitle id="empty-title">No money here yet</EmptyTitle>
+            <EmptyDescription>
               Ask a friend to send you money. Your balances will show up here.
-            </p>
-          </CardContent>
-        </Card>
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <ul className={gridClass}>
           {data.map((b) => (
