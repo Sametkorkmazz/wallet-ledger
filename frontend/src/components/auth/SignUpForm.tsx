@@ -1,10 +1,10 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { signUpSchema, type SignUpValues } from "@/schemas/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
 
 export default function SignUpForm() {
   const {
@@ -75,7 +75,7 @@ export default function SignUpForm() {
           </p>
         )}
       </div>
-      <Button type="submit" size={"lg"}>
+      <Button type="submit" size="lg">
         Create account
       </Button>
     </form>

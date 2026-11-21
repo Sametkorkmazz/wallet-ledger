@@ -4,7 +4,7 @@ const delay = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export async function getBalances(): Promise<Balance[]> {
-  await delay(500); // TODO: replace with GET /api/balances (Dec 7 week)
+  await delay(500); // TODO: replace with GET /api/v1/balances (Dec 7 week)
   return [
     {
       currency: "EUR",
