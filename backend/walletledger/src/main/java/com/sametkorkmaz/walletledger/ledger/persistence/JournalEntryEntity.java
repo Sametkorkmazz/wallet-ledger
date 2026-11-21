@@ -13,6 +13,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -25,7 +27,7 @@ class JournalEntryEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "description", length = LedgerEntry.MAX_DESCRIPTION_LENGTH)
+    @Column(name = "description", length = LedgerEntry.MAX_DESCRIPTION_LENGTH, nullable = false)
     private String description;
 
     @Enumerated(EnumType.STRING)
@@ -38,7 +40,8 @@ class JournalEntryEntity {
     @Column(name = "created_by")
     private UUID createdBy;
 
-    @Column(name = "created_at", updatable = false)
+    @Generated(event = EventType.INSERT)
+    @Column(name = "created_at", updatable = false, insertable = false, nullable = false)
     private Instant createdAt;
 
     protected JournalEntryEntity() {
@@ -49,7 +52,6 @@ class JournalEntryEntity {
         this.entryType = ledgerEntry.entryType();
         this.reversesEntryId = valueOrNull(ledgerEntry.reversesEntryId());
         this.createdBy = valueOrNull(ledgerEntry.createdBy());
-        this.createdAt = Instant.now();
     }
 
     private static UUID valueOrNull(UserId userId) {

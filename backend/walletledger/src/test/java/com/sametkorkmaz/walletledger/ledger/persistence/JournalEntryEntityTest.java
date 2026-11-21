@@ -7,7 +7,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
 import java.util.UUID;
 
 import static com.sametkorkmaz.walletledger.ledger.persistence.LedgerEntryData.DESCRIPTION;
@@ -40,14 +39,5 @@ class JournalEntryEntityTest {
             JournalEntryEntity entryEntity = createEntry();
             assertThat(entryEntity.getDescription()).isEqualTo(DESCRIPTION);
         }
-
-        @Test
-        void setsCreatedAtToCreationTime() {
-            Instant before = Instant.now();
-            JournalEntryEntity entryEntity = createEntry();
-            Instant after = Instant.now();
-            assertThat(entryEntity.getCreatedAt()).isBetween(before, after);
-        }
     }
-
 }
