@@ -1,8 +1,17 @@
 package com.sametkorkmaz.walletledger.ledger.persistence;
 
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Getter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -24,7 +33,8 @@ class AccountEntity {
     @Column(name = "currency", nullable = false)
     private Currency currency;
 
-    @Column(name = "created_at", updatable = false, nullable = false)
+    @Generated(event = EventType.INSERT)
+    @Column(name = "created_at", updatable = false, nullable = false, insertable = false)
     private Instant createdAt;
 
     protected AccountEntity() {
@@ -34,6 +44,5 @@ class AccountEntity {
         Objects.requireNonNull(currency, "currency must not be null");
         this.userId = userId;
         this.currency = currency;
-        this.createdAt = Instant.now();
     }
 }
