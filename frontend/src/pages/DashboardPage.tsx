@@ -1,5 +1,6 @@
 import BalanceCard from "@/components/dashboard/BalanceCard";
 import BalanceCardSkeleton from "@/components/dashboard/BalanceCardSkeleton";
+import PageHeader from "@/components/layout/PageHeader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +10,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Skeleton } from "@/components/ui/skeleton";
 import useBalances from "@/hooks/useBalances";
 import { formatDate } from "@/lib/money";
 import { CircleAlert, Inbox, RefreshCw, Send } from "lucide-react";
@@ -25,22 +25,19 @@ export default function DashboardPage() {
   const lastUpdated = dataUpdatedAt > 0 ? formatDate(dataUpdatedAt) : undefined;
   return (
     <div className="flex flex-col gap-4">
-      <header className="flex items-start justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="page-title">Dashboard</h1>
-          {dataUpdatedAt > 0 ? (
-            <p className="caption">Balances as of {lastUpdated}</p>
-          ) : (
-            isPending && <Skeleton className="h-5 w-48" />
-          )}
-        </div>
-        <Button asChild>
-          <Link to="/transfer">
-            <Send />
-            Send money
-          </Link>
-        </Button>
-      </header>
+      <PageHeader
+        title="Dashboard"
+        description={lastUpdated && `Balances as of ${lastUpdated}`}
+        loading={isPending}
+        action={
+          <Button asChild>
+            <Link to="/transfer">
+              <Send />
+              Send money
+            </Link>
+          </Button>
+        }
+      />
       {isPending ? (
         <>
           <span className="sr-only">Loading balances</span>
