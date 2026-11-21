@@ -1,7 +1,5 @@
 import type { Balance } from "@/api/types";
-
-const delay = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
+import { delay } from "@/api/utils";
 
 export async function getBalances(): Promise<Balance[]> {
   await delay(500); // TODO: replace with GET /api/v1/balances (Dec 7 week)
