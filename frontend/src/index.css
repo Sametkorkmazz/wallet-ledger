@@ -94,3 +94,11 @@
     cursor: pointer;
   }
 }
+
+@utility page-title {
+  @apply text-2xl font-semibold tracking-tight;
+}
+
+@utility caption {
+  @apply text-sm text-muted-foreground;
+}

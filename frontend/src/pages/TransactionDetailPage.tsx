@@ -4,8 +4,8 @@ export default function TransactionDetailPage() {
   const { id } = useParams();
   return (
     <div className="flex flex-col gap-1">
-      <h1 className="text-2xl font-semibold tracking-tight">Transaction</h1>
-      <p className="text-sm text-muted-foreground">{id}</p>
+      <h1 className="page-title">Transaction</h1>
+      <p className="caption">{id}</p>
     </div>
   );
 }
