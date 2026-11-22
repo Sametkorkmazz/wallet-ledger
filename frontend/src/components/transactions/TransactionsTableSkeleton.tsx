@@ -10,7 +10,7 @@ export default function TransactionsTableSkeleton({ rows }: { rows: number }) {
   return (
     <>
       <span className="sr-only">Loading transactions</span>
-      <Table aria-busy="true" className="table-fixed">
+      <Table className="table-fixed">
         {transactionsTableHeader}
         <TableBody>
           {Array.from({ length: rows }, (_, i) => (
@@ -23,6 +23,9 @@ export default function TransactionsTableSkeleton({ rows }: { rows: number }) {
                   <SkeletonText className="w-48" />
                   <div className="caption lg:hidden">
                     <SkeletonText className="w-32" />
+                  </div>
+                  <div className="caption sm:hidden">
+                    <SkeletonText className="w-24" />
                   </div>
                   <div className="mt-2 sm:hidden">
                     <Skeleton className="h-5 w-20 rounded-full" />

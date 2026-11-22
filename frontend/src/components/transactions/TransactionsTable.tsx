@@ -34,6 +34,9 @@ export default function TransactionsTable({
                   {t.counterparty}
                 </Link>
                 <span className="caption lg:hidden">{t.reference}</span>
+                <span className="caption sm:hidden">
+                  {formatDateShort(Date.parse(t.createdAt))}
+                </span>
                 <div className="mt-2 flex sm:hidden">
                   <StatusBadge status={t.status} />
                 </div>

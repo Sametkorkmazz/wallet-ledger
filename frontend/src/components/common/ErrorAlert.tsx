@@ -4,14 +4,14 @@ import { CircleAlert, RefreshCw } from "lucide-react";
 
 type ErrorAlertProps = {
   title: string;
-  description: string;
+  description?: string;
   isRetrying: boolean;
   onRetry: () => void;
 };
 
 export default function ErrorAlert({
   title,
-  description,
+  description = "The server didn't answer. Your money is safe. Check your connection and try again.",
   onRetry,
   isRetrying,
 }: ErrorAlertProps) {
