@@ -47,9 +47,8 @@ export default function DashboardPage() {
       ) : isError && data === undefined ? (
         <ErrorAlert
           title="Couldn't load your balances"
-          description="The server didn't answer. Your money is safe. Check your connection and try again."
           isRetrying={isFetching}
-          onRetry={() => refetch()}
+          onRetry={refetch}
         />
       ) : data.length === 0 ? (
         <EmptyState

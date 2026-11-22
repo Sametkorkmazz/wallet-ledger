@@ -4,15 +4,26 @@ import { cn } from "cn";
 
 export default function TransactionAmount({
   transaction,
+  announceStatus = false,
 }: {
   transaction: Transaction;
+  /** Read "Failed" to screen readers. Use only where no StatusBadge is shown. */
+  announceStatus?: boolean;
 }) {
-  const incoming = transaction.type === "TRANSFER_IN";
+  const isFailed = transaction.status === "FAILED";
+  const isIncoming = transaction.type === "TRANSFER_IN";
+
   return (
     <span
-      className={cn("font-medium tabular-nums", incoming && "text-success")}
+      className={cn(
+        "font-medium tabular-nums",
+        isFailed
+          ? "text-muted-foreground line-through"
+          : isIncoming && "text-success",
+      )}
     >
-      {incoming ? "+" : "−"}
+      {isFailed && announceStatus && <span className="sr-only">Failed: </span>}
+      {!isFailed && (isIncoming ? "+" : "−")}
       {formatMoney(transaction.amount, transaction.currency)}
     </span>
   );
