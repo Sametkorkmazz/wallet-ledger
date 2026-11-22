@@ -1,19 +1,13 @@
+import EmptyState from "@/components/common/EmptyState";
+import ErrorAlert from "@/components/common/ErrorAlert";
 import BalanceCard from "@/components/dashboard/BalanceCard";
 import BalanceCardSkeleton from "@/components/dashboard/BalanceCardSkeleton";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import PageHeader from "@/components/layout/PageHeader";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import useBalances from "@/hooks/useBalances";
 import { formatDate } from "@/lib/money";
-import { CircleAlert, Inbox, RefreshCw, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const gridClass =
@@ -51,38 +45,17 @@ export default function DashboardPage() {
           </ul>
         </>
       ) : isError && data === undefined ? (
-        <Alert variant="destructive">
-          <CircleAlert />
-          <AlertTitle>Couldn't load your balances</AlertTitle>
-          <AlertDescription className="flex flex-col gap-2">
-            <p>
-              The server didn't answer. Your money is safe. Check your
-              connection and try again.
-            </p>
-            <Button
-              className="self-start"
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              disabled={isFetching}
-            >
-              <RefreshCw />
-              Try again
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <ErrorAlert
+          title="Couldn't load your balances"
+          description="The server didn't answer. Your money is safe. Check your connection and try again."
+          isRetrying={isFetching}
+          onRetry={() => refetch()}
+        />
       ) : data.length === 0 ? (
-        <Empty aria-labelledby="empty-title">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Inbox className="size-6" />
-            </EmptyMedia>
-            <EmptyTitle id="empty-title">No money here yet</EmptyTitle>
-            <EmptyDescription>
-              Ask a friend to send you money. Your balances will show up here.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <EmptyState
+          title="No money here yet"
+          description="Ask a friend to send you money. Your balances will show up here."
+        />
       ) : (
         <ul className={gridClass}>
           {data.map((b) => (
