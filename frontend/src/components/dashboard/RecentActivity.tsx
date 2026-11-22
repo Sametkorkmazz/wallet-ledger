@@ -1,14 +1,16 @@
-import StatusBadge from "@/components/dashboard/StatusBadge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import EmptyState from "@/components/common/EmptyState";
+import ErrorAlert from "@/components/common/ErrorAlert";
+import SkeletonText from "@/components/common/SkeletonText";
+import TransactionAmount from "@/components/transactions/TransactionAmount";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -19,33 +21,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import useTransactions from "@/hooks/useTransactions";
-import { formatDateShort, formatMoney } from "@/lib/money";
+import { formatDateShort } from "@/lib/money";
 import { cn } from "cn";
-import { CircleAlert, Inbox, RefreshCw } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
+const RECENT_SIZE = 5;
 const header = (
   <TableHeader>
     <TableRow>
-      <TableHead className="w-2/5">Transaction</TableHead>
-      <TableHead className="hidden w-1/5 md:table-cell">Date</TableHead>
-      <TableHead className="hidden w-1/5 sm:table-cell">Status</TableHead>
-      <TableHead className="w-1/5 text-right">Amount</TableHead>
+      <TableHead className="w-1/2">Transfer</TableHead>
+      <TableHead className="hidden w-1/4 sm:table-cell">Date</TableHead>
+      <TableHead className="w-1/4 text-right">Amount</TableHead>
     </TableRow>
   </TableHeader>
 );
 
-function SkeletonText({ className }: { className?: string }) {
-  return (
-    <div className="flex h-lh items-center">
-      <Skeleton className={cn("h-3", className)} />
-    </div>
-  );
-}
-
 export default function RecentActivity() {
   const { data, isPending, isError, isFetching, refetch } = useTransactions({
     page: 0,
-    size: 5,
+    size: RECENT_SIZE,
   });
 
   return (
@@ -57,6 +52,12 @@ export default function RecentActivity() {
         <CardTitle>
           <h2 id="recent-activity-title">Recent activity</h2>
         </CardTitle>
+        <CardDescription>Your last {RECENT_SIZE} transfers</CardDescription>
+        <CardAction>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/transactions">View all</Link>
+          </Button>
+        </CardAction>
       </CardHeader>
       <CardContent>
         {isPending ? (
@@ -65,22 +66,26 @@ export default function RecentActivity() {
             <Table aria-busy="true" className="table-fixed">
               {header}
               <TableBody>
-                {Array.from({ length: 5 }, (_, i) => (
+                {Array.from({ length: RECENT_SIZE }, (_, i) => (
                   <TableRow key={i}>
                     <TableCell>
-                      <SkeletonText className="w-24" />
-                      <div className="caption">
-                        <SkeletonText className="w-33" />
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="size-8 rounded-full" />
+                        <div className="flex flex-col">
+                          <div>
+                            <SkeletonText className="w-33" />
+                          </div>
+                          <div className="caption">
+                            <SkeletonText className="w-20" />
+                          </div>
+                          <div className="caption sm:hidden">
+                            <SkeletonText className="w-24" />
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-2 sm:hidden">
-                        <Skeleton className="h-5.5 w-20 rounded-full" />
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <SkeletonText className="w-20" />
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      <SkeletonText className="w-16" />
+                      <SkeletonText className="w-20" />
                     </TableCell>
                     <TableCell>
                       <SkeletonText className="ml-auto w-16" />
@@ -91,40 +96,16 @@ export default function RecentActivity() {
             </Table>
           </>
         ) : isError && data === undefined ? (
-          <Alert variant="destructive">
-            <CircleAlert />
-            <AlertTitle>Couldn't load your activity</AlertTitle>
-            <AlertDescription className="flex flex-col gap-2">
-              <p>
-                The server didn't answer. Your money is safe. Check your
-                connection and try again.
-              </p>
-              <Button
-                className="self-start"
-                variant="outline"
-                size="sm"
-                onClick={() => refetch()}
-                disabled={isFetching}
-              >
-                <RefreshCw />
-                Try again
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <ErrorAlert
+            title="Couldn't load your activity"
+            isRetrying={isFetching}
+            onRetry={refetch}
+          />
         ) : data.content.length === 0 ? (
-          <Empty aria-labelledby="recent-activity-empty-title">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Inbox className="size-6" />
-              </EmptyMedia>
-              <EmptyTitle id="recent-activity-empty-title">
-                No activity yet
-              </EmptyTitle>
-              <EmptyDescription>
-                Your transfers will show up here.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          <EmptyState
+            title="No activity yet"
+            description="Your transfers will show up here."
+          />
         ) : (
           <Table className="table-fixed">
             {header}
@@ -132,28 +113,39 @@ export default function RecentActivity() {
               {data.content.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{t.counterparty}</span>
-                      <span className="caption">{t.reference}</span>
-                      <span className="mt-2 sm:hidden">
-                        <StatusBadge status={t.status} />
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={cn(
+                          "flex size-8 shrink-0 items-center justify-center rounded-full bg-muted",
+                          t.type === "TRANSFER_IN" &&
+                            "bg-success/12 text-success",
+                        )}
+                      >
+                        {t.type === "TRANSFER_IN" ? (
+                          <ArrowDownLeft className="size-4" />
+                        ) : (
+                          <ArrowUpRight className="size-4" />
+                        )}
                       </span>
+                      <div className="flex flex-col">
+                        <Link
+                          to={`/transactions/${t.id}`}
+                          className="w-fit font-medium hover:underline focus-visible:underline"
+                        >
+                          {t.counterparty}
+                        </Link>
+                        <span className="caption">{t.reference}</span>
+                        <span className="caption sm:hidden">
+                          {formatDateShort(Date.parse(t.createdAt))}
+                        </span>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">
+                  <TableCell className="hidden text-muted-foreground sm:table-cell">
                     {formatDateShort(Date.parse(t.createdAt))}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <StatusBadge status={t.status} />
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      "text-right tabular-nums",
-                      t.type === "TRANSFER_IN" && "text-success",
-                    )}
-                  >
-                    {t.type === "TRANSFER_IN" && "+"}
-                    {formatMoney(t.amount, t.currency)}
+                  <TableCell className="text-right">
+                    <TransactionAmount transaction={t} announceStatus />
                   </TableCell>
                 </TableRow>
               ))}
