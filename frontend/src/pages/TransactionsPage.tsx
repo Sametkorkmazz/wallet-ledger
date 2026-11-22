@@ -4,12 +4,11 @@ import PageButton from "@/components/common/PageButton";
 import PageHeader from "@/components/layout/PageHeader";
 import TransactionsTable from "@/components/transactions/TransactionsTable";
 import TransactionsTableSkeleton from "@/components/transactions/TransactionsTableSkeleton";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import useTransactions from "@/hooks/useTransactions";
 import { parsePage } from "@/lib/pagination";
 import { cn } from "cn";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 const PAGE_SIZE = 10;
 
@@ -35,16 +34,15 @@ export default function TransactionsPage() {
             "transition-opacity",
             isPlaceholderData && "opacity-60",
           )}
-          aria-busy={isPlaceholderData}
+          aria-busy={isPending || isPlaceholderData}
         >
           {isPending ? (
             <TransactionsTableSkeleton rows={PAGE_SIZE} />
           ) : isError && data === undefined ? (
             <ErrorAlert
               title="Couldn't load your history"
-              description="The server didn't answer. Your money is safe. Check your connection and try again."
               isRetrying={isFetching}
-              onRetry={() => refetch()}
+              onRetry={refetch}
             />
           ) : data.totalElements === 0 ? (
             <EmptyState
@@ -56,9 +54,9 @@ export default function TransactionsPage() {
               title="This page does not exist"
               description={`Your history has ${data.totalPages} ${data.totalPages === 1 ? "page" : "pages"}`}
             >
-              <Button asChild variant="outline">
-                <Link to={"?page=1"}>Go to page 1</Link>
-              </Button>
+              <PageButton to={1} size="default">
+                Go to page 1
+              </PageButton>
             </EmptyState>
           ) : (
             <TransactionsTable transactions={data.content} />

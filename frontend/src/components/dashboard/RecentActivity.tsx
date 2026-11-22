@@ -78,6 +78,9 @@ export default function RecentActivity() {
                           <div className="caption">
                             <SkeletonText className="w-20" />
                           </div>
+                          <div className="caption sm:hidden">
+                            <SkeletonText className="w-24" />
+                          </div>
                         </div>
                       </div>
                     </TableCell>
@@ -95,9 +98,8 @@ export default function RecentActivity() {
         ) : isError && data === undefined ? (
           <ErrorAlert
             title="Couldn't load your activity"
-            description="The server didn't answer. Your money is safe. Check your connection and try again."
             isRetrying={isFetching}
-            onRetry={() => refetch()}
+            onRetry={refetch}
           />
         ) : data.content.length === 0 ? (
           <EmptyState
@@ -133,6 +135,9 @@ export default function RecentActivity() {
                           {t.counterparty}
                         </Link>
                         <span className="caption">{t.reference}</span>
+                        <span className="caption sm:hidden">
+                          {formatDateShort(Date.parse(t.createdAt))}
+                        </span>
                       </div>
                     </div>
                   </TableCell>
@@ -140,7 +145,7 @@ export default function RecentActivity() {
                     {formatDateShort(Date.parse(t.createdAt))}
                   </TableCell>
                   <TableCell className="text-right">
-                    <TransactionAmount transaction={t} />
+                    <TransactionAmount transaction={t} announceStatus />
                   </TableCell>
                 </TableRow>
               ))}
