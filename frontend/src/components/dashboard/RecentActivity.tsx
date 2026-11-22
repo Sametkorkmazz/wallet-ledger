@@ -126,7 +126,12 @@ export default function RecentActivity() {
                         )}
                       </span>
                       <div className="flex flex-col">
-                        <span className="font-medium">{t.counterparty}</span>
+                        <Link
+                          to={`/transactions/${t.id}`}
+                          className="w-fit font-medium hover:underline focus-visible:underline"
+                        >
+                          {t.counterparty}
+                        </Link>
                         <span className="caption">{t.reference}</span>
                       </div>
                     </div>
