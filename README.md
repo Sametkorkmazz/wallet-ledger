@@ -19,7 +19,7 @@ that tackles the problems real payment systems face.
 
 | Area     | Technology                                                                                              |
 |----------|---------------------------------------------------------------------------------------------------------|
-| Backend  | Java 21, Spring Boot 3.5, Maven                                                                         |
+| Backend  | Java 21, Spring Boot 4.2, Maven                                                                         |
 | Database | PostgreSQL 16, Flyway migrations                                                                        |
 | Tests    | JUnit 5, AssertJ, Mockito, Testcontainers, ArchUnit                                                     |
 | Frontend | React, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, TanStack Query, React Router, React Hook Form, Zod |
