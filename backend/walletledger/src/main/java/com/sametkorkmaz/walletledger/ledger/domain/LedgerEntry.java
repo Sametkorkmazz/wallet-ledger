@@ -68,4 +68,23 @@ public record LedgerEntry(String description, EntryType entryType, EntryId rever
     public static LedgerEntry of(String description, EntryType entryType, UserId createdBy, List<LedgerLine> lines) {
         return new LedgerEntry(description, entryType, null, createdBy, lines);
     }
+
+    public static LedgerEntry transfer(UserId createdBy, Account from, Account to, Money amount, String description) {
+        Objects.requireNonNull(createdBy, "createdBy must not be null");
+        Objects.requireNonNull(from, "from must not be null");
+        Objects.requireNonNull(to, "to must not be null");
+        Objects.requireNonNull(amount, "amount must not be null");
+        if (!createdBy.equals(from.userId())) {
+            throw new AccountNotFoundException(from.id());
+        }
+        if (from.currency() != amount.currency() || to.currency() != amount.currency()) {
+            throw new LedgerRuleException(ErrorCode.TRANSFER_CURRENCY_MISMATCH, "Can't do transfers on different currencies.");
+        }
+        if (!amount.isPositive()) {
+            throw new LedgerRuleException(ErrorCode.TRANSFER_AMOUNT_NOT_POSITIVE, "Amounts must be positive (>0) for transfers.");
+        }
+        LedgerLine fromLine = new LedgerLine(from.id(), amount.negate());
+        LedgerLine toLine = new LedgerLine(to.id(), amount);
+        return new LedgerEntry(description, EntryType.TRANSFER, null, createdBy, List.of(fromLine, toLine));
+    }
 }

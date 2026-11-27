@@ -5,13 +5,16 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -271,6 +274,89 @@ class LedgerEntryTest {
             assertThatThrownBy(() -> entry((EntryType) null, null))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessage("entryType must not be null");
+        }
+    }
+
+    @Nested
+    @DisplayName("Transfer factory")
+    class TransferFactory {
+        private static final UserId OWNER = UserId.of(UUID.randomUUID());
+        private static final Account FROM = new Account(AccountId.of(UUID.randomUUID()), OWNER, Currency.EUR);
+        private static final Account TO = new Account(AccountId.of(UUID.randomUUID()), OWNER, Currency.EUR);
+        private static final Money AMOUNT = Money.of(Currency.EUR, "10.00");
+
+        static Stream<Arguments> nullArguments() {
+            return Stream.of(
+                    Arguments.of(null, FROM, TO, AMOUNT, "createdBy must not be null"),
+                    Arguments.of(OWNER, null, TO, AMOUNT, "from must not be null"),
+                    Arguments.of(OWNER, FROM, null, AMOUNT, "to must not be null"),
+                    Arguments.of(OWNER, FROM, TO, null, "amount must not be null"));
+        }
+
+        @Test
+        void createsTransferEntryWithNegativeFromLineAndPositiveToLine() {
+            LedgerEntry ledgerEntry = LedgerEntry.transfer(OWNER, FROM, TO, AMOUNT, "rent");
+
+            assertThat(ledgerEntry.entryType()).isEqualTo(EntryType.TRANSFER);
+            assertThat(ledgerEntry.description()).isEqualTo("rent");
+            assertThat(ledgerEntry.createdBy()).isEqualTo(OWNER);
+
+            LedgerLine fromLine = ledgerEntry.lines().getFirst();
+            assertThat(fromLine.accountId()).isEqualTo(FROM.id());
+            assertThat(fromLine.amount()).isEqualTo(AMOUNT.negate());
+
+            LedgerLine toLine = ledgerEntry.lines().get(1);
+            assertThat(toLine.accountId()).isEqualTo(TO.id());
+            assertThat(toLine.amount()).isEqualTo(AMOUNT);
+        }
+
+        @Test
+        void throwsWhenUserIdIsNotEqualToFromAccountUser() {
+            UserId randomUser = UserId.of(UUID.randomUUID());
+            Account from = new Account(AccountId.of(UUID.randomUUID()), randomUser, Currency.EUR);
+
+            assertThatThrownBy(() -> LedgerEntry.transfer(OWNER, from, TO, AMOUNT, "rent"))
+                    .isInstanceOfSatisfying(AccountNotFoundException.class, e -> assertThat(e.getCode()).isEqualTo("LEDGER-404-001"));
+
+        }
+
+        @Test
+        void throwsWhenFromCurrencyMismatchAmountCurrency() {
+            Account from = new Account(AccountId.of(UUID.randomUUID()), OWNER, Currency.USD);
+
+            assertThatThrownBy(() -> LedgerEntry.transfer(OWNER, from, TO, AMOUNT, "rent"))
+                    .isInstanceOfSatisfying(LedgerRuleException.class, e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.TRANSFER_CURRENCY_MISMATCH));
+        }
+
+        @Test
+        void throwsWhenFromCurrencyMismatchToCurrency() {
+            Account to = new Account(AccountId.of(UUID.randomUUID()), UserId.of(UUID.randomUUID()), Currency.USD);
+
+            assertThatThrownBy(() -> LedgerEntry.transfer(OWNER, FROM, to, AMOUNT, "rent"))
+                    .isInstanceOfSatisfying(LedgerRuleException.class, e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.TRANSFER_CURRENCY_MISMATCH));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"-10", "0"})
+        void throwsWhenAmountIsNotPositive(String amount) {
+            Money money = Money.of(Currency.EUR, amount);
+
+            assertThatThrownBy(() -> LedgerEntry.transfer(OWNER, FROM, TO, money, "rent"))
+                    .isInstanceOfSatisfying(LedgerRuleException.class, e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.TRANSFER_AMOUNT_NOT_POSITIVE));
+        }
+
+        @Test
+        void throwsWhenTransferIsOnSameAccount() {
+            assertThatThrownBy(() -> LedgerEntry.transfer(OWNER, FROM, FROM, AMOUNT, "rent"))
+                    .isInstanceOfSatisfying(LedgerRuleException.class, e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.LEDGER_RULE_VIOLATED));
+        }
+
+        @ParameterizedTest
+        @MethodSource("nullArguments")
+        void throwsWhenRequiredArgumentIsNull(UserId createdBy, Account from, Account to, Money amount, String message) {
+            assertThatThrownBy(() -> LedgerEntry.transfer(createdBy, from, to, amount, "rent"))
+                    .isInstanceOf(NullPointerException.class)
+                    .hasMessage(message);
         }
     }
 }

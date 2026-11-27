@@ -66,6 +66,10 @@ public record Money(Currency currency, BigDecimal amount) {
         return BigDecimal.ZERO.compareTo(amount) == 0;
     }
 
+    public boolean isPositive() {
+        return BigDecimal.ZERO.compareTo(amount) < 0;
+    }
+
     private void checkSameCurrency(Money money) {
         if (currency != money.currency()) {
             throw new LedgerRuleException("cannot combine %s with %s".formatted(currency, money.currency()));
