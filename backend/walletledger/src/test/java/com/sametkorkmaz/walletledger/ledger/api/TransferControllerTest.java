@@ -87,6 +87,14 @@ class TransferControllerTest {
         }
 
         @Test
+        void returns400WhenAmountIsNotADecimalString() throws IOException {
+            MvcTestResult result = postTransfer(USER.toString(), readRequest("create-transfer-invalid-amount.json"));
+
+            assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+            then(postingService).shouldHaveNoInteractions();
+        }
+
+        @Test
         void returns400WhenDescriptionIsBlank() throws IOException {
             MvcTestResult result = postTransfer(USER.toString(), readRequest("create-transfer-blank-description.json"));
 

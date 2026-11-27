@@ -329,7 +329,7 @@ class LedgerEntryTest {
         }
 
         @Test
-        void throwsWhenFromCurrencyMismatchToCurrency() {
+        void throwsWhenToCurrencyMismatchAmountCurrency() {
             Account to = new Account(AccountId.of(UUID.randomUUID()), UserId.of(UUID.randomUUID()), Currency.USD);
 
             assertThatThrownBy(() -> LedgerEntry.transfer(OWNER, FROM, to, AMOUNT, "rent"))
