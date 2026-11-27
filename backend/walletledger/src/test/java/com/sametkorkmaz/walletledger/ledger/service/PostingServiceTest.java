@@ -7,9 +7,11 @@ import com.sametkorkmaz.walletledger.ledger.domain.AccountNotFoundException;
 import com.sametkorkmaz.walletledger.ledger.domain.Currency;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
 import com.sametkorkmaz.walletledger.ledger.domain.EntryType;
+import com.sametkorkmaz.walletledger.ledger.domain.ErrorCode;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerEntry;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerRuleException;
+import com.sametkorkmaz.walletledger.ledger.domain.Money;
 import com.sametkorkmaz.walletledger.ledger.domain.UserId;
 import com.sametkorkmaz.walletledger.ledger.persistence.AccountStore;
 import com.sametkorkmaz.walletledger.ledger.persistence.LedgerStore;
@@ -34,18 +36,21 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class PostingServiceTest {
 
+    private static final UserId OWNER = UserId.of(UUID.randomUUID());
+    private static final Account FROM = new Account(AccountId.of(UUID.randomUUID()), OWNER, Currency.EUR);
+    private static final Account TO = new Account(AccountId.of(UUID.randomUUID()), OWNER, Currency.EUR);
+    private static final EntryId ENTRY_ID = EntryId.of(UUID.randomUUID());
+
     @Mock
     private AccountStore accountStore;
-
     @Mock
     private LedgerStore ledgerStore;
-
     @InjectMocks
     private PostingService postingService;
 
@@ -79,7 +84,7 @@ class PostingServiceTest {
             given(ledgerStore.saveEntry(any(LedgerEntry.class))).willReturn(EntryId.of(UUID.randomUUID()));
             postingService.postLedger("TEST", EntryType.TRANSFER, lines);
             ArgumentCaptor<LedgerEntry> ledgerEntryArgumentCaptor = ArgumentCaptor.forClass(LedgerEntry.class);
-            verify(ledgerStore).saveEntry(ledgerEntryArgumentCaptor.capture());
+            then(ledgerStore).should().saveEntry(ledgerEntryArgumentCaptor.capture());
             LedgerEntry saved = ledgerEntryArgumentCaptor.getValue();
             assertThat(saved.lines()).extracting(LedgerLine::accountId, l -> l.amount().currency())
                     .containsExactlyInAnyOrder(tuple(account1.id(), account1.currency()), tuple(account2.id(), account2.currency()),
@@ -96,7 +101,7 @@ class PostingServiceTest {
             given(ledgerStore.saveEntry(any(LedgerEntry.class))).willReturn(EntryId.of(UUID.randomUUID()));
             postingService.postLedger("TEST", EntryType.TOP_UP, lines);
             ArgumentCaptor<LedgerEntry> ledgerEntryArgumentCaptor = ArgumentCaptor.forClass(LedgerEntry.class);
-            verify(ledgerStore).saveEntry(ledgerEntryArgumentCaptor.capture());
+            then(ledgerStore).should().saveEntry(ledgerEntryArgumentCaptor.capture());
             LedgerEntry saved = ledgerEntryArgumentCaptor.getValue();
             assertThat(saved.entryType()).isEqualTo(EntryType.TOP_UP);
         }
@@ -123,7 +128,7 @@ class PostingServiceTest {
             assertThatThrownBy(() -> postingService.postLedger(null, EntryType.TRANSFER, lines))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessageContaining("description must not be null");
-            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+            then(ledgerStore).should(never()).saveEntry(any(LedgerEntry.class));
         }
 
         @Test
@@ -136,7 +141,7 @@ class PostingServiceTest {
             assertThatThrownBy(() -> postingService.postLedger("TEST", null, lines))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessageContaining("entryType must not be null");
-            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+            then(ledgerStore).should(never()).saveEntry(any(LedgerEntry.class));
         }
 
         @Test
@@ -153,7 +158,7 @@ class PostingServiceTest {
                     .isInstanceOf(AccountNotFoundException.class)
                     .hasMessageContaining("Accounts not found").hasMessageContainingAll(unknown1.id().toString(), unknown2.id().toString())
                     .hasMessageNotContainingAny(account1.id().toString(), account2.id().toString());
-            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+            then(ledgerStore).should(never()).saveEntry(any(LedgerEntry.class));
         }
 
         @Test
@@ -162,7 +167,7 @@ class PostingServiceTest {
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, Collections.emptyList()))
                     .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry must have at least 2 lines");
-            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+            then(ledgerStore).should(never()).saveEntry(any(LedgerEntry.class));
         }
 
         @Test
@@ -174,7 +179,7 @@ class PostingServiceTest {
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1)))
                     .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry must have at least 2 lines");
-            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+            then(ledgerStore).should(never()).saveEntry(any(LedgerEntry.class));
         }
 
         @Test
@@ -188,7 +193,7 @@ class PostingServiceTest {
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("EUR allows at most 2 decimal places");
-            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+            then(ledgerStore).should(never()).saveEntry(any(LedgerEntry.class));
         }
 
         @Test
@@ -202,7 +207,7 @@ class PostingServiceTest {
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, List.of(lineRequest1, lineRequest2)))
                     .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry does not balance for");
-            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+            then(ledgerStore).should(never()).saveEntry(any(LedgerEntry.class));
         }
 
         @Test
@@ -215,7 +220,7 @@ class PostingServiceTest {
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, lines))
                     .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry does not balance for");
-            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+            then(ledgerStore).should(never()).saveEntry(any(LedgerEntry.class));
         }
 
         @Test
@@ -227,7 +232,7 @@ class PostingServiceTest {
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.TRANSFER, lines))
                     .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("Entry must not contain duplicate accounts");
-            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+            then(ledgerStore).should(never()).saveEntry(any(LedgerEntry.class));
         }
 
         @Test
@@ -253,7 +258,42 @@ class PostingServiceTest {
             assertThatThrownBy(() -> postingService.postLedger("TEST", EntryType.REVERSAL, lines))
                     .isInstanceOf(LedgerRuleException.class)
                     .hasMessageContaining("reversesEntryId is required for REVERSAL and not allowed for other types");
-            verify(ledgerStore, never()).saveEntry(any(LedgerEntry.class));
+            then(ledgerStore).should(never()).saveEntry(any(LedgerEntry.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("Create transfer")
+    class CreateTransfer {
+        @Test
+        void savesTransferEntryWhenRequestIsValid() {
+            given(accountStore.findByIds(anyCollection())).willReturn(Map.of(FROM.id(), FROM, TO.id(), TO));
+            given(ledgerStore.saveEntry(any())).willReturn(ENTRY_ID);
+            ArgumentCaptor<LedgerEntry> captor = ArgumentCaptor.forClass(LedgerEntry.class);
+
+            EntryId result = postingService.createTransfer(OWNER, FROM.id(), TO.id(), "10.00", "rent");
+
+            then(ledgerStore).should().saveEntry(captor.capture());
+            assertThat(captor.getValue()).isEqualTo(LedgerEntry.transfer(OWNER, FROM, TO, Money.of(Currency.EUR, "10.00"), "rent"));
+            assertThat(result).isEqualTo(ENTRY_ID);
+        }
+
+        @Test
+        void throwsAccountNotFoundWhenToAccountDoesNotExist() {
+            given(accountStore.findByIds(anyCollection())).willReturn(Map.of(FROM.id(), FROM));
+            assertThatThrownBy(() -> postingService.createTransfer(OWNER, FROM.id(), TO.id(), "10.00", "rent"))
+                    .isInstanceOfSatisfying(AccountNotFoundException.class,
+                            e -> assertThat(e.getCode()).isEqualTo("LEDGER-404-001"));
+            then(ledgerStore).should(never()).saveEntry(any());
+        }
+
+        @Test
+        void throwsDuplicateAccountWhenFromEqualsTo() {
+            given(accountStore.findByIds(anyCollection())).willReturn(Map.of(FROM.id(), FROM));
+            assertThatThrownBy(() -> postingService.createTransfer(OWNER, FROM.id(), FROM.id(), "10.00", "rent"))
+                    .isInstanceOfSatisfying(LedgerRuleException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.LEDGER_RULE_VIOLATED));
+            then(ledgerStore).should(never()).saveEntry(any());
         }
     }
 }

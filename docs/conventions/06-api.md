@@ -34,6 +34,7 @@
   "correlationId": "4f1c2a9e7b3d4c51" }
 ```
 - One `@RestControllerAdvice` turns exceptions into this shape; validation errors add `fieldErrors`.
+- One handler per error category, not per exception: `NotFoundException` → 404, `LedgerRuleException` → 422, conflict → 409. A new exception extends its category's base class and brings its own `errorCode`; the advice doesn't change.
 - Every error has a stable `errorCode`. Messages may change, codes may not.
 - Never return stack traces, SQL or class names (`server.error.include-stacktrace: never`).
 - 4xx are logged at `WARN` without a stack trace, 5xx at `ERROR` with one.

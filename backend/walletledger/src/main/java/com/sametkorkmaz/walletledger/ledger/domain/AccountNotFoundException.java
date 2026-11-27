@@ -1,14 +1,16 @@
 package com.sametkorkmaz.walletledger.ledger.domain;
 
+import com.sametkorkmaz.walletledger.shared.domain.NotFoundException;
+
 import java.util.Collection;
 import java.util.stream.Collectors;
 
-public class AccountNotFoundException extends RuntimeException {
+public class AccountNotFoundException extends NotFoundException {
     public AccountNotFoundException(AccountId id) {
-        super("Account not found with id: %s".formatted(id));
+        super("LEDGER-404-001", "Account not found with id: %s".formatted(id));
     }
 
     public AccountNotFoundException(Collection<AccountId> ids) {
-        super("Accounts not found with ids: %s".formatted(ids.stream().map(String::valueOf).collect(Collectors.joining(",", "[", "]"))));
+        super("LEDGER-404-001", "Accounts not found with ids: %s".formatted(ids.stream().map(String::valueOf).collect(Collectors.joining(",", "[", "]"))));
     }
 }
