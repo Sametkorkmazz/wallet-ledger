@@ -4,7 +4,7 @@
 | # | Rule | Trap it avoids |
 |---|---|---|
 | 1 | One public service method = one use case = one transaction | Half-done use cases |
-| 2 | `@Transactional` only on **public** service methods | Spring's proxy ignores private ones |
+| 2 | `@Transactional` only on **public service** methods; stores and controllers never open one | The service owns the unit of work; a store-level transaction hides a missing service boundary, and Spring's proxy ignores private methods |
 | 3 | Never call a `@Transactional` method from the same class expecting a new transaction | Self-invocation bypasses the proxy silently |
 | 4 | Rollback happens on unchecked exceptions; ours are unchecked | A checked exception commits half the work |
 | 5 | **No remote calls** (HTTP, Kafka, e-mail) inside a transaction | Long locks; "sent the notification, rolled back the payment" |

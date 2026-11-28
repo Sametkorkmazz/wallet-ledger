@@ -16,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +32,8 @@ class LedgerStoreIntegrationTest {
     JdbcTemplate jdbcTemplate;
     @Autowired
     LedgerStore ledgerStore;
+    @Autowired
+    TransactionTemplate transactionTemplate;
 
     @BeforeEach
     void cleanTables() {
@@ -56,12 +59,12 @@ class LedgerStoreIntegrationTest {
         }
 
         @Test
-        void rollsBackEntryAndLinesWhenALineFails() {
+        void rollsBackEntryAndLinesWhenALineFailsInsideCallerTransaction() {
             UUID account1 = TestData.insertAccount(jdbcTemplate);
             LedgerLine ledgerLine1 = new LedgerLine(AccountId.of(account1), Money.of(Currency.EUR, "10.0"));
             LedgerLine ledgerLine2 = new LedgerLine(AccountId.of(UUID.randomUUID()), Money.of(Currency.EUR, "-10.0"));
             LedgerEntry ledgerEntry = LedgerEntry.of("TEST", EntryType.TRANSFER, null, List.of(ledgerLine1, ledgerLine2));
-            assertThatThrownBy(() -> ledgerStore.saveEntry(ledgerEntry))
+            assertThatThrownBy(() -> transactionTemplate.executeWithoutResult(s -> ledgerStore.saveEntry(ledgerEntry)))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessageContaining("fk_journal_lines_accounts");
             int entries = jdbcTemplate.queryForObject("SELECT count(*) FROM journal_entries", Integer.class);

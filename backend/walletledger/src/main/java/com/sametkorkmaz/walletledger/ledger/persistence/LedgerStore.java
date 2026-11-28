@@ -7,11 +7,16 @@ import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import com.sametkorkmaz.walletledger.ledger.domain.Money;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Saves journal entries and reads balances.
+ * <p>
+ * Must be called inside a service transaction (05-transactions rule 2): this class opens none, so a call
+ * outside one commits each statement on its own.
+ */
 @Component
 @RequiredArgsConstructor
 public class LedgerStore {
@@ -21,7 +26,6 @@ public class LedgerStore {
     /**
      * Currency is not stored: the caller built the lines from loaded accounts
      */
-    @Transactional
     public EntryId saveEntry(LedgerEntry ledgerEntry) {
         JournalEntryEntity journalEntryEntity = new JournalEntryEntity(ledgerEntry);
         journalEntryEntity = journalEntryRepository.saveAndFlush(journalEntryEntity);

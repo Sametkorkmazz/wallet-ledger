@@ -6,6 +6,7 @@ import com.sametkorkmaz.walletledger.ledger.domain.EntryId;
 import com.sametkorkmaz.walletledger.ledger.domain.LedgerRuleException;
 import com.sametkorkmaz.walletledger.ledger.domain.UserId;
 import com.sametkorkmaz.walletledger.ledger.service.PostingService;
+import com.sametkorkmaz.walletledger.ledger.service.TransferResult;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import static org.mockito.BDDMockito.then;
 class TransferControllerTest {
 
     private static final UUID USER = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    private static final UUID IDEMPOTENCY_KEY = UUID.fromString("55555555-5555-5555-5555-555555555555");
     private static final UUID FROM = UUID.fromString("22222222-2222-2222-2222-222222222222");
     private static final UUID TO = UUID.fromString("33333333-3333-3333-3333-333333333333");
     private static final UUID ENTRY = UUID.fromString("44444444-4444-4444-4444-444444444444");
@@ -46,8 +48,13 @@ class TransferControllerTest {
     }
 
     private MvcTestResult postTransfer(String userId, String body) {
+        return postTransfer(userId, IDEMPOTENCY_KEY.toString(), body);
+    }
+
+    private MvcTestResult postTransfer(String userId, String idempotencyKey, String body) {
         return mvc.post().uri("/api/v1/transfers")
                 .header("X-User-Id", userId)
+                .header("Idempotency-Key", idempotencyKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body)
                 .exchange();
@@ -59,7 +66,7 @@ class TransferControllerTest {
 
         @Test
         void returns201WithLocationAndEntryIdWhenRequestIsValid() throws IOException {
-            given(postingService.createTransfer(any(), any(), any(), any(), any())).willReturn(EntryId.of(ENTRY));
+            given(postingService.createTransfer(any(), any(), any(), any(), any(), any())).willReturn(new TransferResult(EntryId.of(ENTRY), false));
 
             MvcTestResult result = postTransfer(USER.toString(), readRequest("create-transfer.json"));
 
@@ -70,12 +77,34 @@ class TransferControllerTest {
 
         @Test
         void passesRequestValuesToServiceWhenRequestIsValid() throws IOException {
-            given(postingService.createTransfer(any(), any(), any(), any(), any())).willReturn(EntryId.of(ENTRY));
+            given(postingService.createTransfer(any(), any(), any(), any(), any(), any())).willReturn(new TransferResult(EntryId.of(ENTRY), false));
 
             postTransfer(USER.toString(), readRequest("create-transfer.json"));
 
             then(postingService).should()
-                    .createTransfer(UserId.of(USER), AccountId.of(FROM), AccountId.of(TO), "10.00", "Rent");
+                    .createTransfer(UserId.of(USER), IDEMPOTENCY_KEY, AccountId.of(FROM), AccountId.of(TO), "10.00", "Rent");
+        }
+
+        @Test
+        void returnsReplayedTrueWith201WhenSameRequest() throws IOException {
+            given(postingService.createTransfer(any(), any(), any(), any(), any(), any())).willReturn(new TransferResult(EntryId.of(ENTRY), true));
+
+            MvcTestResult result = postTransfer(USER.toString(), readRequest("create-transfer.json"));
+
+            assertThat(result).hasStatus(HttpStatus.CREATED);
+            assertThat(result).headers().hasValue("Idempotent-Replayed", "true");
+            assertThat(result).bodyJson().extractingPath("$.entryId").isEqualTo(ENTRY.toString());
+        }
+
+        @Test
+        void returnsNoReplayedHeaderWhenRequestIsNew() throws IOException {
+            given(postingService.createTransfer(any(), any(), any(), any(), any(), any())).willReturn(new TransferResult(EntryId.of(ENTRY), false));
+
+            MvcTestResult result = postTransfer(USER.toString(), readRequest("create-transfer.json"));
+
+            assertThat(result).hasStatus(HttpStatus.CREATED);
+            assertThat(result).headers().doesNotContainHeader("Idempotent-Replayed");
+            assertThat(result).bodyJson().extractingPath("$.entryId").isEqualTo(ENTRY.toString());
         }
 
         @Test
@@ -109,6 +138,13 @@ class TransferControllerTest {
         }
 
         @Test
+        void returns400WhenIdempotencyKeyIsNotUuid() throws IOException {
+            MvcTestResult result = postTransfer(USER.toString(), "abc", readRequest("create-transfer.json"));
+
+            assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        }
+
+        @Test
         void returns400WhenUserIdIsMissing() throws IOException {
             MvcTestResult result = mvc.post().uri("/api/v1/transfers")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -119,8 +155,19 @@ class TransferControllerTest {
         }
 
         @Test
+        void returns400WhenIdempotencyKeyIsMissing() throws IOException {
+            MvcTestResult result = mvc.post().uri("/api/v1/transfers")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("X-User-Id", USER)
+                    .content(readRequest("create-transfer.json"))
+                    .exchange();
+
+            assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        }
+
+        @Test
         void returns422ProblemWithErrorCodeWhenLedgerRuleIsBroken() throws IOException {
-            given(postingService.createTransfer(any(), any(), any(), any(), any()))
+            given(postingService.createTransfer(any(), any(), any(), any(), any(), any()))
                     .willThrow(new LedgerRuleException("Entry does not balance for EUR"));
 
             MvcTestResult result = postTransfer(USER.toString(), readRequest("create-transfer.json"));
@@ -133,7 +180,7 @@ class TransferControllerTest {
 
         @Test
         void returns404ProblemWithErrorCodeWhenAccountIsUnknown() throws IOException {
-            given(postingService.createTransfer(any(), any(), any(), any(), any()))
+            given(postingService.createTransfer(any(), any(), any(), any(), any(), any()))
                     .willThrow(new AccountNotFoundException(AccountId.of(TO)));
 
             MvcTestResult result = postTransfer(USER.toString(), readRequest("create-transfer.json"));

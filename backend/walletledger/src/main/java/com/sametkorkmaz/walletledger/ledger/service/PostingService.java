@@ -10,10 +10,14 @@ import com.sametkorkmaz.walletledger.ledger.domain.LedgerLine;
 import com.sametkorkmaz.walletledger.ledger.domain.Money;
 import com.sametkorkmaz.walletledger.ledger.domain.UserId;
 import com.sametkorkmaz.walletledger.ledger.persistence.AccountStore;
+import com.sametkorkmaz.walletledger.ledger.persistence.IdempotencyStore;
 import com.sametkorkmaz.walletledger.ledger.persistence.LedgerStore;
+import com.sametkorkmaz.walletledger.ledger.persistence.StoredKey;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,6 +34,8 @@ public class PostingService {
 
     private final LedgerStore ledgerStore;
     private final AccountStore accountStore;
+    private final IdempotencyStore idempotencyStore;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public UUID postLedger(String description, EntryType entryType, List<LineRequest> lineRequests) {
@@ -51,11 +57,22 @@ public class PostingService {
     }
 
     @Transactional
-    public EntryId createTransfer(UserId userId, AccountId from, AccountId to, String amount, String description) {
+    public TransferResult createTransfer(UserId userId, UUID idempotencyKey, AccountId from, AccountId to, String amount, String description) {
         Map<AccountId, Account> accounts = getAccounts(List.of(from, to));
         Money transferAmount = Money.of(accounts.get(from).currency(), amount);
+        String requestHash = TransferFingerprint.hashRequest(from, to, transferAmount, description);
+        boolean isNewKey = idempotencyStore.tryInsert(userId, idempotencyKey, requestHash);
+        if (!isNewKey) {
+            StoredKey storedKey = idempotencyStore.find(userId, idempotencyKey).orElseThrow(IllegalStateException::new);
+            if (!storedKey.requestHash().equals(requestHash)) {
+                throw new IdempotencyKeyReusedException("Using same idempotency key for a different request is not allowed");
+            }
+            return new TransferResult(storedKey.entryId(), true);
+        }
         LedgerEntry entry = LedgerEntry.transfer(userId, accounts.get(from), accounts.get(to), transferAmount, description);
-        return ledgerStore.saveEntry(entry);
+        EntryId entryId = ledgerStore.saveEntry(entry);
+        idempotencyStore.complete(userId, idempotencyKey, entryId, HttpStatus.CREATED.value(), objectMapper.writeValueAsString(Map.of("entryId", entryId.value())));
+        return new TransferResult(entryId, false);
     }
 
     private Map<AccountId, Account> getAccounts(Collection<AccountId> ids) {

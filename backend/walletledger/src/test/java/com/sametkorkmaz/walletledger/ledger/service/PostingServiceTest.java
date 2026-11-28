@@ -14,7 +14,9 @@ import com.sametkorkmaz.walletledger.ledger.domain.LedgerRuleException;
 import com.sametkorkmaz.walletledger.ledger.domain.Money;
 import com.sametkorkmaz.walletledger.ledger.domain.UserId;
 import com.sametkorkmaz.walletledger.ledger.persistence.AccountStore;
+import com.sametkorkmaz.walletledger.ledger.persistence.IdempotencyStore;
 import com.sametkorkmaz.walletledger.ledger.persistence.LedgerStore;
+import com.sametkorkmaz.walletledger.ledger.persistence.StoredKey;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,19 +24,23 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -42,15 +48,21 @@ import static org.mockito.Mockito.never;
 @ExtendWith(MockitoExtension.class)
 class PostingServiceTest {
 
+    private static final UUID IDEMPOTENCY_KEY = UUID.fromString("11111111-1111-1111-1111-111111111111");
     private static final UserId OWNER = UserId.of(UUID.randomUUID());
     private static final Account FROM = new Account(AccountId.of(UUID.randomUUID()), OWNER, Currency.EUR);
     private static final Account TO = new Account(AccountId.of(UUID.randomUUID()), OWNER, Currency.EUR);
     private static final EntryId ENTRY_ID = EntryId.of(UUID.randomUUID());
+    private static final Money AMOUNT = Money.of(Currency.EUR, "10");
 
     @Mock
     private AccountStore accountStore;
     @Mock
     private LedgerStore ledgerStore;
+    @Mock
+    private IdempotencyStore idempotencyStore;
+    @Spy
+    private ObjectMapper objectMapper = JsonMapper.builder().build();
     @InjectMocks
     private PostingService postingService;
 
@@ -266,31 +278,73 @@ class PostingServiceTest {
     @DisplayName("Create transfer")
     class CreateTransfer {
         @Test
-        void savesTransferEntryWhenRequestIsValid() {
+        void savesTransferEntryWhenRequestIsValidAndKeyIsNew() {
             given(accountStore.findByIds(anyCollection())).willReturn(Map.of(FROM.id(), FROM, TO.id(), TO));
+            given(idempotencyStore.tryInsert(any(), any(), any())).willReturn(true);
             given(ledgerStore.saveEntry(any())).willReturn(ENTRY_ID);
+
             ArgumentCaptor<LedgerEntry> captor = ArgumentCaptor.forClass(LedgerEntry.class);
 
-            EntryId result = postingService.createTransfer(OWNER, FROM.id(), TO.id(), "10.00", "rent");
+            TransferResult result = postingService.createTransfer(OWNER, IDEMPOTENCY_KEY, FROM.id(), TO.id(), "10.00", "rent");
 
             then(ledgerStore).should().saveEntry(captor.capture());
             assertThat(captor.getValue()).isEqualTo(LedgerEntry.transfer(OWNER, FROM, TO, Money.of(Currency.EUR, "10.00"), "rent"));
-            assertThat(result).isEqualTo(ENTRY_ID);
+            assertThat(result.entryId()).isEqualTo(ENTRY_ID);
+            assertThat(result.replayed()).isFalse();
+
+            then(idempotencyStore).should().tryInsert(OWNER, IDEMPOTENCY_KEY, TransferFingerprint.hashRequest(FROM.id(), TO.id(), AMOUNT, "rent"));
+            then(idempotencyStore).should().complete(eq(OWNER), eq(IDEMPOTENCY_KEY), eq(ENTRY_ID), eq(201), anyString());
+        }
+
+
+        @Test
+        void replaysStoredEntryWhenKeyExistsWithSameHash() {
+            given(accountStore.findByIds(anyCollection())).willReturn(Map.of(FROM.id(), FROM, TO.id(), TO));
+            given(idempotencyStore.tryInsert(any(), any(), any())).willReturn(false);
+            String requestHash = TransferFingerprint.hashRequest(FROM.id(), TO.id(), AMOUNT, "rent");
+            given(idempotencyStore.find(any(), any())).willReturn(Optional.of(new StoredKey(requestHash, ENTRY_ID, HttpStatus.CREATED.value(), "entryId: " + ENTRY_ID)));
+
+            TransferResult result = postingService.createTransfer(OWNER, IDEMPOTENCY_KEY, FROM.id(), TO.id(), "10.00", "rent");
+
+            then(idempotencyStore).should().tryInsert(OWNER, IDEMPOTENCY_KEY, requestHash);
+            then(idempotencyStore).should().find(OWNER, IDEMPOTENCY_KEY);
+            then(idempotencyStore).should(never()).complete(any(), any(), any(), anyInt(), any());
+            then(ledgerStore).should(never()).saveEntry(any());
+
+            assertThat(result).isEqualTo(new TransferResult(ENTRY_ID, true));
+        }
+
+        @Test
+        void throwsKeyReusedWhenKeyExistsWithDifferentHash() {
+            given(accountStore.findByIds(anyCollection())).willReturn(Map.of(FROM.id(), FROM, TO.id(), TO));
+            given(idempotencyStore.tryInsert(any(), any(), any())).willReturn(false);
+            given(idempotencyStore.find(any(), any())).willReturn(
+                    Optional.of(new StoredKey(TransferFingerprint.hashRequest(FROM.id(), TO.id(), Money.of(Currency.USD, "15.00"), "rent"),
+                            ENTRY_ID, HttpStatus.CREATED.value(), "entryId: " + ENTRY_ID)));
+
+            assertThatThrownBy(() -> postingService.createTransfer(OWNER, IDEMPOTENCY_KEY, FROM.id(), TO.id(), "10.00", "rent"))
+                    .isInstanceOfSatisfying(IdempotencyKeyReusedException.class, e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.IDEMPOTENCY_KEY_REUSED));
+
+            then(idempotencyStore).should().tryInsert(OWNER, IDEMPOTENCY_KEY, TransferFingerprint.hashRequest(FROM.id(), TO.id(), AMOUNT, "rent"));
+            then(idempotencyStore).should(never()).complete(any(), any(), any(), anyInt(), any());
+            then(ledgerStore).should(never()).saveEntry(any());
         }
 
         @Test
         void throwsAccountNotFoundWhenToAccountDoesNotExist() {
             given(accountStore.findByIds(anyCollection())).willReturn(Map.of(FROM.id(), FROM));
-            assertThatThrownBy(() -> postingService.createTransfer(OWNER, FROM.id(), TO.id(), "10.00", "rent"))
+            assertThatThrownBy(() -> postingService.createTransfer(OWNER, IDEMPOTENCY_KEY, FROM.id(), TO.id(), "10.00", "rent"))
                     .isInstanceOfSatisfying(AccountNotFoundException.class,
                             e -> assertThat(e.getCode()).isEqualTo("LEDGER-404-001"));
+            then(idempotencyStore).shouldHaveNoInteractions();
             then(ledgerStore).should(never()).saveEntry(any());
         }
 
         @Test
         void throwsDuplicateAccountWhenFromEqualsTo() {
             given(accountStore.findByIds(anyCollection())).willReturn(Map.of(FROM.id(), FROM));
-            assertThatThrownBy(() -> postingService.createTransfer(OWNER, FROM.id(), FROM.id(), "10.00", "rent"))
+            given(idempotencyStore.tryInsert(any(), any(), any())).willReturn(true);
+            assertThatThrownBy(() -> postingService.createTransfer(OWNER, IDEMPOTENCY_KEY, FROM.id(), FROM.id(), "10.00", "rent"))
                     .isInstanceOfSatisfying(LedgerRuleException.class,
                             e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.LEDGER_RULE_VIOLATED));
             then(ledgerStore).should(never()).saveEntry(any());
